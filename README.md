@@ -44,38 +44,53 @@ const CUSTOMER_MAP = {
 
 - Stripe secret keys: server-side only
 - Auth: Cognito JWT validation
-- User can only access own data
+- User can only access their own data
 
 ## Project Structure
 
 ### Frontend Structure
 
 ```
+```
 src/
-├── main.tsx                    # App entry point
-├── App.tsx                     # Root component with routing
-├── theme.ts                    # MUI theme configuration
+├── main.tsx                           # Application entry point
+├── App.tsx                            # Root component with routing setup
+├── theme.ts                           # MUI theme configuration
+├── vite-env.d.ts                      # Vite TypeScript declarations
 │
-├── pages/
-│   ├── LoginPage.tsx          # Auth UI (Amplify Authenticator)
-│   ├── DashboardPage.tsx      # Landing page after login
-│   └── SubscriptionPage.tsx   # Main feature: show subscription
+├── pages/                             # Top-level route components
+│   ├── LoginPage.tsx                 # Authentication UI (Amplify Authenticator)
+│   ├── DashboardPage.tsx             # Post-login landing page
+│   └── SubscriptionPage.tsx          # Main feature: subscription management
 │
 ├── components/
-│   ├── SubscriptionStatus.tsx # Display subscription info (MUI Card)
-│   ├── LoadingSpinner.tsx     # MUI CircularProgress wrapper
-│   └── ErrorMessage.tsx       # MUI Alert for errors
+│   ├── ui/                           # Reusable base UI components
+│   │   ├── Button.tsx               # Styled button with consistent theming
+│   │   ├── Card.tsx                 # Card container wrapper
+│   │   ├── Table.tsx                # Table component with sorting/filtering
+│   │   ├── LoadingSpinner.tsx       # Loading state indicator (MUI CircularProgress)
+│   │   └── ErrorMessage.tsx         # Error alert display (MUI Alert)
+│   │
+│   └── features/                     # Business-specific components
+│       └── SubscriptionStatus.tsx   # Subscription info card with plan details
 │
-├── hooks/
-│   ├── useSubscription.ts     # Fetch subscription data
-│   └── useAuth.ts             # Amplify auth state
+├── hooks/                            # Custom React hooks
+│   ├── useSubscription.ts           # Fetch and manage subscription data (React Query)
+│   ├── useAuth.ts                   # Amplify authentication state
+│   └── useBillingPortal.ts          # Create Stripe Billing Portal session
 │
-├── types/
-│   └── subscription.ts        # TypeScript interfaces
+├── types/                            # TypeScript type definitions
+│   ├── subscription.ts              # Subscription-related interfaces
+│   └── api.ts                       # API request/response types
 │
-└── utils/
-    └── api.ts                 # Amplify function client calls
+├── utils/                            # Utility functions
+│   ├── api.ts                       # Amplify API client helpers
+│   └── formatters.ts                # Date/currency formatting utilities
+│
+└── config/                           # Configuration files
+    └── amplify.ts                    # Amplify configuration wrapper
 ```
+
 
 ### Backend Structure
 
