@@ -50,7 +50,7 @@ const CUSTOMER_MAP = {
 
 ### Frontend Structure
 
-```
+
 ```
 src/
 ├── main.tsx                           # Application entry point
