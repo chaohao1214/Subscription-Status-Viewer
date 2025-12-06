@@ -1,12 +1,12 @@
 {
-  "name": "get-subscription-status",
+  "name": "create-billing-portal",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "dotenv": "^17.2.3",
     "stripe": "^17.3.1"
   },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.145"
+    "@types/aws-lambda": "^8.10.145",
+    "dotenv": "^16.4.5"
   }
 }
