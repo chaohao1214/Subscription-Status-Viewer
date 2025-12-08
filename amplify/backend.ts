@@ -3,6 +3,7 @@ import { auth } from "./auth/resource";
 import { data } from "./data/resource";
 import { getSubscriptionStatus } from "./functions/get-subscription-status/resource";
 import { createBillingPortal } from "./functions/create-billing-portal/resource";
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -21,4 +22,14 @@ backend.getSubscriptionStatus.resources.lambda.grantInvoke(
 
 backend.createBillingPortal.resources.lambda.grantInvoke(
   backend.auth.resources.authenticatedUserIamRole
+);
+
+backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
+  new PolicyStatement({
+    actions: ["lambda:InvokeFunction"],
+    resources: [
+      backend.getSubscriptionStatus.resources.lambda.functionArn,
+      backend.createBillingPortal.resources.lambda.functionArn,
+    ],
+  })
 );
