@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { signOut } from "aws-amplify/auth";
 import {
   CposButton,
   CposCard,
@@ -8,18 +7,13 @@ import {
   CposPageHeader,
 } from "../components/ui";
 import { Button, Typography } from "@mui/material";
+import { useSignOut } from "../hooks/useSignOut";
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
-  };
+  const { handleSignOut } = useSignOut();
+
   return (
     <CposContainer>
       <CposPageHeader

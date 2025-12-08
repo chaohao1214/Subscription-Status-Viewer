@@ -5,7 +5,6 @@ import {
   createBillingPortalSession,
   getSubscriptionStatus,
 } from "../api/apiEndpoints";
-import { signOut } from "aws-amplify/auth";
 import {
   CposButton,
   CposCard,
@@ -15,6 +14,7 @@ import {
   CposPageHeader,
 } from "../components/ui";
 import { SubscriptionStatus } from "../components/features/SubscriptionStatus";
+import { useSignOut } from "../hooks/useSignOut";
 
 /**
  * Subscription management page
@@ -29,6 +29,7 @@ const SubscriptionPage: React.FC = () => {
     null
   );
   const [portalLoading, setPortalLoading] = useState(false);
+  const { handleSignOut } = useSignOut();
 
   /**
    * Fetch subscription data from backend
@@ -64,15 +65,6 @@ const SubscriptionPage: React.FC = () => {
         error instanceof Error ? error.message : "Failed to open billing portal"
       );
       setPortalLoading(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-    } catch (error) {
-      console.error("Error signing out:", error);
     }
   };
 
