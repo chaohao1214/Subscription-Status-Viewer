@@ -4,7 +4,7 @@ import { type SubscriptionData } from "../types/subscription";
 import {
   createBillingPortalSession,
   getSubscriptionStatus,
-} from "../utils/api";
+} from "../api/apiEndpoints";
 import { signOut } from "aws-amplify/auth";
 import {
   CposButton,
