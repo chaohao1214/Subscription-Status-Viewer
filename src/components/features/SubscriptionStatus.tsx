@@ -1,7 +1,14 @@
 import React from "react";
-import { Box, Typography, Chip, Divider } from "@mui/material";
 import type { SubscriptionData } from "../../types/subscription";
 import { formatDate } from "../../utils/utils";
+import {
+  CposCard,
+  CposBox,
+  CposText,
+  CposDivider,
+  CposBadge,
+  CposStack,
+} from "../../components/ui";
 
 interface SubscriptionStatusProps {
   data: SubscriptionData;
@@ -9,7 +16,6 @@ interface SubscriptionStatusProps {
 
 /**
  * Status configuration for different subscription states
- * Maps status to display label and color
  */
 const STATUS_CONFIG = {
   active: { label: "Active", color: "success" as const },
@@ -22,80 +28,170 @@ const STATUS_CONFIG = {
 /**
  * Subscription status display component
  * Shows plan details, renewal date, and billing cycle
+ * Uses only Cpos components for consistency
  */
 export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
   data,
 }) => {
-  const statusConfig = STATUS_CONFIG[data.status];
+  const hasMultipleSubscriptions =
+    data.subscriptions && data.subscriptions.length > 0;
 
+  // Single subscription or no subscription view
+  if (data.status === "none" || !hasMultipleSubscriptions) {
+    const statusConfig = STATUS_CONFIG[data.status];
+
+    return (
+      <CposCard>
+        {/* Header with status badge */}
+        <CposBox
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={3}
+        >
+          <CposText variant="h5" fontWeight={600}>
+            Subscription Status
+          </CposText>
+          <CposBadge label={statusConfig.label} color={statusConfig.color} />
+        </CposBox>
+
+        <CposDivider sx={{ mb: 3 }} />
+
+        {/* Subscription details */}
+        {data.status !== "none" && (
+          <CposStack spacing={2}>
+            {/* Plan name */}
+            {data.planName && (
+              <CposBox>
+                <CposText variant="caption" color="text.secondary">
+                  Plan
+                </CposText>
+                <CposText variant="h6" fontWeight={500}>
+                  {data.planName}
+                </CposText>
+              </CposBox>
+            )}
+
+            {/* Renewal date */}
+            {data.renewalDate && (
+              <CposBox>
+                <CposText variant="caption" color="text.secondary">
+                  Next Renewal
+                </CposText>
+                <CposText variant="body1">
+                  {formatDate(data.renewalDate)}
+                </CposText>
+              </CposBox>
+            )}
+
+            {/* Billing cycle */}
+            {data.renewalPeriod && (
+              <CposBox>
+                <CposText variant="caption" color="text.secondary">
+                  Billing Cycle
+                </CposText>
+                <CposText variant="body1" sx={{ textTransform: "capitalize" }}>
+                  {data.renewalPeriod}ly
+                </CposText>
+              </CposBox>
+            )}
+          </CposStack>
+        )}
+
+        {/* No subscription message */}
+        {data.status === "none" && (
+          <CposText variant="body1" color="text.secondary">
+            You don't have an active subscription.
+          </CposText>
+        )}
+      </CposCard>
+    );
+  }
+
+  // Multiple subscriptions view
   return (
-    <Box>
-      {/* Header with status badge */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-      >
-        <Typography variant="h5" fontWeight={600}>
-          Subscription Status
-        </Typography>
-        <Chip
-          label={statusConfig.label}
-          color={statusConfig.color}
-          size="medium"
-        />
-      </Box>
+    <CposBox>
+      <CposText variant="h5" fontWeight={600} mb={3}>
+        Your Subscriptions
+      </CposText>
 
-      <Divider sx={{ mb: 3 }} />
+      {/* Loop through all subscriptions */}
+      <CposStack spacing={3}>
+        {data.subscriptions!.map((subscription, index) => {
+          const statusConfig =
+            STATUS_CONFIG[subscription.status as keyof typeof STATUS_CONFIG];
 
-      {/* Subscription details (only show if user has subscription) */}
-      {data.status !== "none" && (
-        <Box display="flex" flexDirection="column" gap={2}>
-          {/* Plan name */}
-          {data.planName && (
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Plan
-              </Typography>
-              <Typography variant="h6" fontWeight={500}>
-                {data.planName}
-              </Typography>
-            </Box>
-          )}
+          return (
+            <CposCard
+              key={subscription.id}
+              sx={{
+                // Highlight primary subscription with border
+                ...(index === 0 && {
+                  border: 2,
+                  borderColor: "primary.main",
+                }),
+              }}
+            >
+              {/* Header with plan name and status */}
+              <CposBox
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
+                <CposBox display="flex" alignItems="center" gap={1}>
+                  <CposText variant="h6" fontWeight={600}>
+                    {subscription.planName}
+                  </CposText>
+                  {/* Primary badge for first subscription */}
+                  {index === 0 && (
+                    <CposBadge
+                      label="Primary"
+                      color="primary"
+                      variant="outlined"
+                      size="small"
+                    />
+                  )}
+                </CposBox>
+                <CposBadge
+                  label={statusConfig.label}
+                  color={statusConfig.color}
+                  size="small"
+                />
+              </CposBox>
 
-          {/* Renewal date */}
-          {data.renewalDate && (
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Next Renewal
-              </Typography>
-              <Typography variant="body1">
-                {formatDate(data.renewalDate)}
-              </Typography>
-            </Box>
-          )}
+              <CposDivider sx={{ mb: 2 }} />
 
-          {/* Billing cycle */}
-          {data.renewalPeriod && (
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Billing Cycle
-              </Typography>
-              <Typography variant="body1" sx={{ textTransform: "capitalize" }}>
-                {data.renewalPeriod}ly
-              </Typography>
-            </Box>
-          )}
-        </Box>
-      )}
+              {/* Subscription details */}
+              <CposStack spacing={1.5}>
+                {/* Renewal date */}
+                <CposBox display="flex" justifyContent="space-between">
+                  <CposText variant="body2" color="text.secondary">
+                    Next Renewal
+                  </CposText>
+                  <CposText variant="body2" fontWeight={500}>
+                    {formatDate(subscription.renewalDate)}
+                  </CposText>
+                </CposBox>
 
-      {/* No subscription message */}
-      {data.status === "none" && (
-        <Typography variant="body1" color="text.secondary">
-          You don't have an active subscription.
-        </Typography>
-      )}
-    </Box>
+                {/* Billing cycle */}
+                <CposBox display="flex" justifyContent="space-between">
+                  <CposText variant="body2" color="text.secondary">
+                    Billing Cycle
+                  </CposText>
+                  <CposText
+                    variant="body2"
+                    fontWeight={500}
+                    sx={{ textTransform: "capitalize" }}
+                  >
+                    {subscription.renewalPeriod}ly
+                  </CposText>
+                </CposBox>
+              </CposStack>
+            </CposCard>
+          );
+        })}
+      </CposStack>
+    </CposBox>
   );
 };
