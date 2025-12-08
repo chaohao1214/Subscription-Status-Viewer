@@ -1,165 +1,476 @@
-# Subscription-Status-Viewer
+# Subscription Status Viewer
 
-## Architecture Overview
+A full-stack web application for managing and viewing Stripe subscription statuses with AWS Amplify Gen 2 backend.
 
-### Tech Stack
+## 🚀 Features
+- **User Authentication**: Secure login with AWS Cognito
 
-- **Frontend:** React 18 + TypeScript + MUI
-- **Backend:** AWS Amplify Gen 2 Functions (Node.js 20)
-- **Auth:** AWS Cognito
-- **Payment:** Stripe API (Test Mode)
-- **Database:** None (hardcoded user mapping per requirements)
+- **Subscription Management**: View current subscription status and plan details
 
-### System Architecture
+- **Billing Portal**: Direct integration with Stripe Customer Portal for managing payments
 
-```
-User Browser
-    ↓
-React App (Login → Dashboard → Subscription Page)
-    ↓
-AWS Cognito (Auth) + Amplify Functions
-    ↓
-Stripe API (Subscriptions + Billing Portal)
-```
+- **Responsive UI**: Modern Material-UI design with custom theming
 
-## Key Decisions
+- **Real-time Data**: Fetch subscription information directly from Stripe API
 
-### 1. No Database
+- **Type-Safe**: Full TypeScript implementation across frontend and backend
 
-**Why:** Requirements specify "environment variable or hardcoded mapping"
-**Implementation:**
+## 🛠 Tech Stack
+### Frontend
 
-```typescript
-const CUSTOMER_MAP = {
-  "user-id": process.env.STRIPE_TEST_CUSTOMER_ID,
-};
-```
+- **React 19** - UI framework
 
-### 2. Two Backend Functions
+- **TypeScript** - Type safety
 
-- `getSubscriptionStatus` - Fetch subscription from Stripe
-- `createBillingPortal` - Generate Stripe portal URL
+- **Material-UI (MUI) v7** - Component library
 
-### 3. Security
+- **React Router v7** - Client-side routing
 
-- Stripe secret keys: server-side only
-- Auth: Cognito JWT validation
-- User can only access their own data
+- **React Query** - Data fetching and caching
 
-## Project Structure
+- **Vite** - Build tool and dev server
 
-### Frontend Structure
+### Backend
 
+- **AWS Amplify Gen 2** - Backend infrastructure
+
+- **AWS Lambda** - Serverless functions (Node.js 20)
+
+- **AWS Cognito** - User authentication
+
+- **Stripe API** - Payment and subscription management
+
+## 📁 Project Structure
+
+ 
 
 ```
-src/
-├── main.tsx                           # Application entry point
-├── App.tsx                            # Root component with routing setup
-├── theme.ts                           # MUI theme configuration
-├── vite-env.d.ts                      # Vite TypeScript declarations
+
+subscription-status-viewer/
+
+├── src/
+
+│   ├── pages/                    # Route components
+
+│   │   ├── LoginPage.tsx
+
+│   │   ├── DashboardPage.tsx
+
+│   │   └── SubscriptionPage.tsx
+
+│   ├── components/
+
+│   │   ├── ui/                   # Reusable UI components
+
+│   │   │   ├── CposButton.tsx
+
+│   │   │   ├── CposCard.tsx
+
+│   │   │   ├── CposContainer.tsx
+
+│   │   │   ├── CposLoadingSpinner.tsx
+
+│   │   │   ├── CposErrorMessage.tsx
+
+│   │   │   └── CposPageHeader.tsx
+
+│   │   └── features/             # Feature-specific components
+
+│   │       └── SubscriptionStatus.tsx
+
+│   ├── types/                    # TypeScript definitions
+
+│   │   ├── subscription.ts
+
+│   │   ├── apiTpyes.ts
+
+│   │   └── amplify.d.ts
+
+│   ├── utils/                    # Helper functions
+
+│   │   └── api.ts
+
+│   ├── config/                   # Configuration
+
+│   │   └── amplify.ts
+
+│   ├── App.tsx                   # Root component
+
+│   ├── main.tsx                  # Entry point
+
+│   └── theme.ts                  # MUI theme configuration
+
 │
-├── pages/                             # Top-level route components
-│   ├── LoginPage.tsx                 # Authentication UI (Amplify Authenticator)
-│   ├── DashboardPage.tsx             # Post-login landing page
-│   └── SubscriptionPage.tsx          # Main feature: subscription management
+
+├── amplify/
+
+│   ├── auth/                     # Cognito configuration
+
+│   │   └── resource.ts
+
+│   ├── functions/
+
+│   │   ├── get-subscription-status/
+
+│   │   │   ├── handler.ts        # Fetch subscription from Stripe
+
+│   │   │   ├── resource.ts
+
+│   │   │   └── package.json
+
+│   │   └── create-billing-portal/
+
+│   │       ├── handler.ts        # Generate Stripe portal URL
+
+│   │       ├── resource.ts
+
+│   │       └── package.json
+
+│   ├── backend.ts                # Main backend configuration
+
+│   └── package.json
+
 │
-├── components/
-│   ├── ui/                           # Reusable base UI components
-│   │   ├── Button.tsx               # Styled button with consistent theming
-│   │   ├── Card.tsx                 # Card container wrapper
-│   │   ├── Table.tsx                # Table component with sorting/filtering
-│   │   ├── LoadingSpinner.tsx       # Loading state indicator (MUI CircularProgress)
-│   │   └── ErrorMessage.tsx         # Error alert display (MUI Alert)
-│   │
-│   └── features/                     # Business-specific components
-│       └── SubscriptionStatus.tsx   # Subscription info card with plan details
-│
-├── hooks/                            # Custom React hooks
-│   ├── useSubscription.ts           # Fetch and manage subscription data (React Query)
-│   ├── useAuth.ts                   # Amplify authentication state
-│   └── useBillingPortal.ts          # Create Stripe Billing Portal session
-│
-├── types/                            # TypeScript type definitions
-│   ├── subscription.ts              # Subscription-related interfaces
-│   └── api.ts                       # API request/response types
-│
-├── utils/                            # Utility functions
-│   ├── api.ts                       # Amplify API client helpers
-│   └── formatters.ts                # Date/currency formatting utilities
-│
-└── config/                           # Configuration files
-    └── amplify.ts                    # Amplify configuration wrapper
+
+├── package.json
+
+├── tsconfig.json
+
+├── vite.config.ts
+
+└── README.md
+
 ```
 
+## 🏗 Architecture
 
-### Backend Structure
-
-```
-amplify/
-├── backend.ts                              # Amplify backend config
-│
-├── auth/
-│   └── resource.ts                         # Cognito user pool setup
-│
-├── functions/
-│   ├── get-subscription-status/
-│   │   ├── handler.ts                      # Lambda: get subscription
-│   │   ├── resource.ts                     # Function definition
-│   │   └── package.json                    # Stripe SDK dependency
-│   │
-│   └── create-billing-portal/
-│       ├── handler.ts                      # Lambda: billing portal
-│       ├── resource.ts                     # Function definition
-│       └── package.json                    # Stripe SDK dependency
-│
-└── shared/
-    ├── types.ts                            # Shared TypeScript types
-    └── stripe-client.ts                    # Stripe client singleton
-```
-
-### Configuration Files
+ 
 
 ```
-/
-├── package.json                # Frontend dependencies (MUI, React, etc)
-├── tsconfig.json              # TypeScript config
-├── vite.config.ts             # Vite bundler config
-├── .env.local                 # Local environment variables
-└── amplify_outputs.json       # Auto-generated by Amplify CLI
+
+┌─────────────────┐
+
+│   User Browser  │
+
+└────────┬────────┘
+
+         │
+
+         ▼
+
+┌─────────────────┐
+
+│   React App     │
+
+│  - Login Page   │
+
+│  - Dashboard    │
+
+│  - Subscription │
+
+└────────┬────────┘
+
+         │
+
+         ▼
+
+┌─────────────────────────────────┐
+
+│      AWS Services               │
+
+│                                 │
+
+│  ┌──────────────────────────┐  │
+
+│  │    AWS Cognito           │  │
+
+│  │    (Authentication)      │  │
+
+│  └──────────────────────────┘  │
+
+│               │                 │
+
+│               ▼                 │
+
+│  ┌──────────────────────────┐  │
+
+│  │   Amplify Functions      │  │
+
+│  │  - getSubscriptionStatus │  │
+
+│  │  - createBillingPortal   │  │
+
+│  └──────────────────────────┘  │
+
+└──────────────┬──────────────────┘
+
+               │
+
+               ▼
+
+        ┌──────────────┐
+
+        │  Stripe API  │
+
+        │  (Test Mode) │
+
+        └──────────────┘
+
 ```
 
-## API Design
+## 🚦 Getting Started
+
+ 
+
+### Prerequisites
+
+ 
+
+- Node.js 20+ and npm
+
+- AWS Account
+
+- Stripe Account (Test mode)
+
+- AWS Amplify CLI
+
+ 
+
+### Installation
+
+ 
+
+1. **Clone the repository**
+
+   ```bash
+
+   git clone <repository-url>
+
+   cd Subscription-Status-Viewer
+
+   ```
+
+ 
+
+2. **Install dependencies**
+
+   ```bash
+
+   npm install
+
+   ```
+
+ 
+
+3. **Configure environment variables**
+
+ 
+
+   Create a `.env.local` file in the root directory:
+
+   ```env
+
+   VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+   STRIPE_SECRET_KEY=sk_test_...
+
+   STRIPE_TEST_CUSTOMER_ID=cus_...
+
+   ```
+
+ 
+
+4. **Deploy Amplify backend**
+
+   ```bash
+
+   npx ampx sandbox
+
+   ```
+
+ 
+
+5. **Start development server**
+
+   ```bash
+
+   npm run dev
+
+   ```
+
+ 
+
+6. **Open browser**
+
+   Navigate to `http://localhost:5173`
+
+ 
+
+## 🔌 API Endpoints
+
+ 
 
 ### GET Subscription Status
+
+ 
+
+Fetches the current subscription status for the authenticated user.
+
+ 
 
 **Response:**
 
 ```typescript
+
 {
+
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'none',
+
   planName?: string,
+
   renewalDate?: string,
+
   renewalPeriod?: 'month' | 'year'
+
 }
+
 ```
+### POST Create Billing Portal
 
-### Create Billing Portal
+ 
 
-**Request:** `{ returnUrl: string }`
-**Response:** `{ url: string }`
+Creates a Stripe Billing Portal session for the user.
 
-## Trade-offs
+ 
 
-| Decision          | Why                      | Future                      |
-| ----------------- | ------------------------ | --------------------------- |
-| Hardcoded mapping | Fast, meets requirements | Add DynamoDB later          |
-| No webhooks       | Time constraint          | Add as stretch goal         |
-| Tailwind CSS      | Speed over polish        | Acceptable per requirements |
+**Request:**
 
-## What Would I Add With More Time
+```typescript
 
-1. Webhook handler for real-time updates
-2. DynamoDB for user→customer mapping
-3. Amplitude event tracking
-4. Unit tests
-5. Billing history table
+{
+
+  returnUrl: string
+
+}
+
+```
+**Response:**
+
+```typescript
+
+{
+
+  url: string  // Stripe portal URL
+
+}
+
+```
+## 🔑 Key Design Decisions
+### 1. Hardcoded Customer Mapping
+Currently uses environment variables to map Cognito user IDs to Stripe customer IDs:
+```typescript
+
+const CUSTOMER_MAP = {
+
+  "cognito-user-id": process.env.STRIPE_TEST_CUSTOMER_ID
+
+};
+
+```
+**Rationale**: Meets MVP requirements quickly without database overhead.
+**Future**: Migrate to DynamoDB for production scalability.
+### 2. Serverless Architecture
+
+Two separate Lambda functions for subscription operations:
+
+- **Separation of concerns**: Each function has a single responsibility
+
+- **Security**: Stripe secret keys remain server-side only
+
+- **Scalability**: Independent scaling per function
+
+### 3. No Webhook Handlers
+
+Currently polling the Stripe API on demand rather than real-time webhooks.
+
+**Rationale**: Faster MVP development and simpler architecture.
+
+**Future**: Add webhook handlers for real-time subscription updates.
+
+## 🔒 Security
+
+- ✅ Stripe secret keys stored in environment variables
+
+- ✅ All API calls authenticated via Cognito JWT
+
+- ✅ User isolation: users can only access their own subscription data
+
+- ✅ HTTPS enforced for all communications
+
+- ✅ No sensitive data stored in frontend
+
+## 🧪 Development
+
+### Available Scripts
+
+```bash
+
+npm run dev      # Start development server
+
+npm run build    # Build for production
+
+npm run preview  # Preview production build
+
+npm run lint     # Run ESLint
+
+```
+### Code Style
+- TypeScript for type safety
+
+- ESLint for code quality
+
+- Functional components with hooks
+
+- Consistent file naming (PascalCase for components, camelCase for utilities)
+
+## 📦 Build and Deploy
+
+### Build for Production
+
+```bash
+
+npm run build
+
+```
+### Deploy to AWS
+
+```bash
+
+npx ampx sandbox delete  # Clean up sandbox
+
+npx ampx pipeline-deploy --branch main  # Deploy to production
+
+```
+## 🔮 Future Enhancements
+
+- [ ] **Real-time Updates**: Stripe webhook handlers for instant status changes
+
+- [ ] **Database Integration**: DynamoDB for user-customer mapping
+
+- [ ] **Billing History**: Table view of past invoices and payments
+
+- [ ] **Analytics**: Amplitude or similar for user behavior tracking
+
+- [ ] **Testing**: Unit and integration tests with Vitest/Jest
+
+- [ ] **Multiple Plans**: Support for tiered subscription management
+
+- [ ] **Usage Metrics**: Track and display usage limits per plan
+
+- [ ] **Email Notifications**: Automated alerts for payment issues
+
+---
+## 👤 Author
+**Chaohao Zhu**
+
+Built with ❤️ using TypeScript, React, AWS Amplify, and Stripe
