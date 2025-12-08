@@ -60,7 +60,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
         {/* Subscription details */}
         {data.status !== "none" && (
           <CposStack spacing={2}>
-            {/* Plan name */}
             {data.planName && (
               <CposBox>
                 <CposText variant="caption" color="text.secondary">
@@ -72,7 +71,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
               </CposBox>
             )}
 
-            {/* Renewal date */}
             {data.renewalDate && (
               <CposBox>
                 <CposText variant="caption" color="text.secondary">
@@ -84,7 +82,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
               </CposBox>
             )}
 
-            {/* Billing cycle */}
             {data.renewalPeriod && (
               <CposBox>
                 <CposText variant="caption" color="text.secondary">
@@ -98,7 +95,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
           </CposStack>
         )}
 
-        {/* No subscription message */}
         {data.status === "none" && (
           <CposText variant="body1" color="text.secondary">
             You don't have an active subscription.
@@ -114,8 +110,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
       <CposText variant="h5" fontWeight={600} mb={3}>
         Your Subscriptions
       </CposText>
-
-      {/* Loop through all subscriptions */}
       <CposStack spacing={3}>
         {data.subscriptions!.map((subscription, index) => {
           const statusConfig =
@@ -132,7 +126,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
                 }),
               }}
             >
-              {/* Header with plan name and status */}
               <CposBox
                 display="flex"
                 justifyContent="space-between"
@@ -143,7 +136,7 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
                   <CposText variant="h6" fontWeight={600}>
                     {subscription.planName}
                   </CposText>
-                  {/* Primary badge for first subscription */}
+
                   {index === 0 && (
                     <CposBadge
                       label="Primary"
@@ -164,17 +157,17 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
 
               {/* Subscription details */}
               <CposStack spacing={1.5}>
-                {/* Renewal date */}
                 <CposBox display="flex" justifyContent="space-between">
                   <CposText variant="body2" color="text.secondary">
                     Next Renewal
                   </CposText>
                   <CposText variant="body2" fontWeight={500}>
-                    {formatDate(subscription.renewalDate)}
+                    {subscription.renewalDate
+                      ? formatDate(subscription.renewalDate)
+                      : "N/A"}
                   </CposText>
                 </CposBox>
 
-                {/* Billing cycle */}
                 <CposBox display="flex" justifyContent="space-between">
                   <CposText variant="body2" color="text.secondary">
                     Billing Cycle
