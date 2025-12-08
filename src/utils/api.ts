@@ -4,14 +4,20 @@ import type {
   BillingPortalResponse,
   SubscriptionData,
 } from "../types/subscription";
+import outputs from "../../amplify_outputs.json";
 
+const lambdaFunctions = outputs.custom?.lambdaFunctions;
+
+if (!lambdaFunctions) {
+  throw new Error("Lambda functions not configured in amplify_outputs.json");
+}
 /**
  * Lambda function name mappings
  * These are the suffix parts that get appended to the Amplify stack prefix
  */
 const LAMBDA_ENDPOINTS = {
-  getSubscription: "getsubscriptionstatuslam",
-  createBillingPortal: "createbillingportallam",
+  getSubscription: lambdaFunctions.getSubscriptionStatus,
+  createBillingPortal: lambdaFunctions.createBillingPortal,
 } as const;
 
 /**
@@ -35,7 +41,7 @@ async function invokeLambda<T>(
   }
 
   const client = new Lambda({
-    region: "us-east-1",
+    region: outputs.auth.aws_region,
     credentials: session.credentials,
   });
 
@@ -43,7 +49,7 @@ async function invokeLambda<T>(
   // FunctionName format: amplify-{projectName}-{functionSuffix}-{randomId}
   const response = await client.send(
     new InvokeCommand({
-      FunctionName: `amplify-subscriptionstatu-${functionName}`,
+      FunctionName: functionName,
       Payload: JSON.stringify({
         requestContext: {
           authorizer: {
