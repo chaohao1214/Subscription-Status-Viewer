@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, Chip, Divider } from "@mui/material";
 import type { SubscriptionData } from "../../types/subscription";
+import { formatDate } from "../../utils/utils";
 
 interface SubscriptionStatusProps {
   data: SubscriptionData;
@@ -26,19 +27,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
   data,
 }) => {
   const statusConfig = STATUS_CONFIG[data.status];
-
-  /**
-   * Format ISO date string to readable format
-   * Example: "2026-01-06T16:24:54.000Z" → "January 6, 2026"
-   */
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
 
   return (
     <Box>
