@@ -9,7 +9,14 @@ export interface SubscriptionData {
   status: SubscriptionStatus;
   planName?: string;
   renewalDate?: string;
-  renewalPeriod?: "month" | "year";
+  renewalPeriod?: string;
+  subscriptions?: Array<{
+    id: string;
+    status: string;
+    planName: string;
+    renewalDate: string;
+    renewalPeriod: string;
+  }>;
 }
 
 export interface BillingPortalResponse {
