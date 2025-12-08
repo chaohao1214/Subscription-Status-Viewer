@@ -14,8 +14,6 @@ import {
 export const handler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log("event: ", JSON.stringify(event, null, 2));
-
   try {
     // Validate authentication
     const userId = validateAuthentication(event);
@@ -23,14 +21,12 @@ export const handler: APIGatewayProxyHandler = async (
     const customerId = getCustomerId(userId);
 
     // Map user ID to Stripe Customer ID (hardcoded for MVP)
-    console.log("Fetching subscriptions for customer:", customerId);
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       limit: 1,
       status: "all",
     });
-    console.log("Subscriptions found:", subscriptions.data.length);
 
     if (subscriptions.data.length === 0) {
       return successResponse({ status: "none" });
@@ -50,10 +46,9 @@ export const handler: APIGatewayProxyHandler = async (
       renewalPeriod:
         subscription.items.data[0].price.recurring?.interval || "month",
     };
-    console.log("Response:", response);
+
     return successResponse(response);
   } catch (error) {
-    console.error("Error:", error);
     // Handle authentication errors specifically
     if (error instanceof Error && error.message === "User not authenticated") {
       return unauthorizedResponse();

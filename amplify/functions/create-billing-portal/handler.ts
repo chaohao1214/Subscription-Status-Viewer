@@ -9,8 +9,6 @@ import {
 } from "../shared/response-utils";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  console.log("Event:", JSON.stringify(event, null, 2));
-
   try {
     // Validate authentication
     const userId = validateAuthentication(event);
@@ -25,15 +23,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return badRequestResponse("returnUrl is required");
     }
 
-    console.log("Creating billing portal session for customer:", customerId);
-
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: returnUrl,
     });
-
-    console.log("Billing portal session created:", session.id);
-    console.log("Portal URL:", session.url);
 
     return successResponse({
       url: session.url,
