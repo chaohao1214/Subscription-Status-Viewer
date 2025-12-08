@@ -33,3 +33,14 @@ backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
     ],
   })
 );
+
+backend.addOutput({
+  custom: {
+    lambdaFunctions: {
+      getSubscriptionStatus:
+        backend.getSubscriptionStatus.resources.lambda.functionArn,
+      createBillingPortal:
+        backend.createBillingPortal.resources.lambda.functionArn,
+    },
+  },
+});
