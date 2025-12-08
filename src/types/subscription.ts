@@ -5,18 +5,19 @@ export type SubscriptionStatus =
   | "canceled"
   | "none";
 
+export interface SingleSubscription {
+  id: string;
+  status: SubscriptionStatus;
+  planName: string;
+  renewalDate: string;
+  renewalPeriod: "month" | "year";
+}
 export interface SubscriptionData {
   status: SubscriptionStatus;
   planName?: string;
   renewalDate?: string;
   renewalPeriod?: string;
-  subscriptions?: Array<{
-    id: string;
-    status: string;
-    planName: string;
-    renewalDate: string;
-    renewalPeriod: string;
-  }>;
+  subscriptions?: SingleSubscription[];
 }
 
 export interface BillingPortalResponse {

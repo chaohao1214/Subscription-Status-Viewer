@@ -14,7 +14,6 @@ import {
   CposLoadingSpinner,
   CposPageHeader,
 } from "../components/ui";
-import { Button } from "@mui/material";
 import { SubscriptionStatus } from "../components/features/SubscriptionStatus";
 
 /**
@@ -68,7 +67,7 @@ const SubscriptionPage: React.FC = () => {
     }
   };
 
-  const handleSighOut = async () => {
+  const handleSignOut = async () => {
     try {
       await signOut();
       navigate("/");
@@ -83,12 +82,15 @@ const SubscriptionPage: React.FC = () => {
         title="Subscription"
         actions={
           <>
-            <Button variant="outlined" onClick={() => navigate("/dashboard")}>
+            <CposButton
+              variant="outlined"
+              onClick={() => navigate("/dashboard")}
+            >
               Back
-            </Button>
-            <Button variant="outlined" onClick={handleSighOut}>
+            </CposButton>
+            <CposButton variant="outlined" onClick={handleSignOut}>
               Sign Out
-            </Button>
+            </CposButton>
           </>
         }
       />
