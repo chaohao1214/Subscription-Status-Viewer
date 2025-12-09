@@ -40,9 +40,24 @@ A full-stack web application for managing and viewing Stripe subscription status
 
 - **Stripe API** - Payment and subscription management
 
-## 📁 Project Structure
+## 📸 Screenshots
 
- 
+### Login Page
+![Login Page](images/loginpage.png)
+
+### Dashboard
+![Dashboard](images/dashboardpage.png)
+
+### Subscription Status
+![Subscription Page](images/subscriptionpage.png)
+
+### Stripe Billing Portal Integration
+![Billing Portal](images/billingsPortal.png)
+
+### Users without a mapping strip customer
+![Billing Portal](images/no_mapping_user.png)
+
+## 📁 Project Structure
 
 ```
 
