@@ -194,15 +194,57 @@ subscription-status-viewer/
    ```
 3. **Configure environment variables**
    Create a `.env` file in the root directory:
-   ```env
-   # Stripe API Keys (Required)
-   STRIPE_SECRET_KEY=sk_test_...
-   STRIPE_TEST_CUSTOMER_ID=cus_...
-   # CORS Configuration (Optional)
-   # For development: Leave commented out to allow all origins
-   # For production: Set to your frontend domain
-   # ALLOWED_ORIGIN=https://yourdomain.com
-   ```
+```env
+# ============================================
+# STRIPE CONFIGURATION
+# ============================================
+
+# Frontend: Stripe Publishable Key
+# Get this from: https://dashboard.stripe.com/test/apikeys
+VITE_STRIPE_PUBLISHABLE_KEY=your_publishable_key_here
+
+# Backend: Stripe Secret Key
+# SECURITY: This is ONLY used server-side, never exposed to frontend
+# Get this from: https://dashboard.stripe.com/test/apikeys
+STRIPE_SECRET_KEY=your_secret_key_here
+
+# ============================================
+# USER-TO-CUSTOMER MAPPING
+# ============================================
+# This application uses environment variables to map Cognito User IDs
+# to Stripe Customer IDs (no database required for MVP).
+#
+# Format: USER_STRIPE_CUSTOMER_<COGNITO_USER_ID_IN_UPPERCASE_WITH_UNDERSCORES>
+#
+# How to set up:
+# 1. Create a test user in your application (sign up)
+# 2. Get the Cognito User ID from AWS Cognito Console or check CloudWatch logs
+#    - Go to: AWS Console > Cognito > User Pools > Users
+#    - The User ID is in the format: 12abc345-6789-0def-gh12-34567ijklm89
+# 3. Create a test customer in Stripe Dashboard
+#    - Go to: https://dashboard.stripe.com/test/customers
+#    - Create a customer and get the Customer ID (format: cus_XXXXX)
+# 4. Convert Cognito User ID to environment variable format:
+#    - Replace all hyphens (-) with underscores (_)
+#    - Convert to UPPERCASE
+#    - Add USER_STRIPE_CUSTOMER_ prefix
+#
+# Example:
+# Cognito User ID: 12abc345-6789-0def-gh12-34567ijklm89
+# Stripe Customer ID: cus_AbCdEf123XyZ
+# Environment Variable: USER_STRIPE_CUSTOMER_12ABC345_6789_0DEF_GH12_34567IJKLM89
+
+# User 1 Example (replace with your actual values)
+USER_STRIPE_CUSTOMER_12ABC345_6789_0DEF_GH12_34567IJKLM89=cus_AbCdEf123XyZ
+
+# User 2 Example (add more users as needed)
+# USER_STRIPE_CUSTOMER_98ZYX765_4321_ABCD_EF01_234567UVWXYZ=cus_AnotherExample123
+
+# Default fallback customer (used when no specific user mapping exists)
+# IMPORTANT: Set this to a valid Stripe Customer ID
+# This customer will be used for any authenticated user without a specific mapping
+USER_STRIPE_CUSTOMER_DEFAULT=cus_DefaultTestCustomer
+```
 4. **Deploy Amplify backend**
 
    ```bash
