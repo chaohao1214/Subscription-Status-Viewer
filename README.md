@@ -3,7 +3,7 @@
 A full-stack web application for managing and viewing Stripe subscription statuses with AWS Amplify Gen 2 backend.
 
 ## 🚀 Features
-- **User Authentication**: Secure login with AWS Cognito
+- **User Authentication**: Secure login with AWS Cognito and protected routes
 
 - **Subscription Management**: View current subscription status and plan details
 
@@ -11,7 +11,7 @@ A full-stack web application for managing and viewing Stripe subscription status
 
 - **Responsive UI**: Modern Material-UI design with custom theming
 
-- **Real-time Data**: Fetch subscription information directly from Stripe API
+- **Real-time Data**: Fetch subscription information directly from the Stripe API
 
 - **Type-Safe**: Full TypeScript implementation across frontend and backend
 
@@ -49,173 +49,106 @@ A full-stack web application for managing and viewing Stripe subscription status
 subscription-status-viewer/
 
 ├── src/
-
 │   ├── pages/                    # Route components
-
 │   │   ├── LoginPage.tsx
-
 │   │   ├── DashboardPage.tsx
-
 │   │   └── SubscriptionPage.tsx
-
 │   ├── components/
-
 │   │   ├── ui/                   # Reusable UI components
-
-│   │   │   ├── CposButton.tsx
-
-│   │   │   ├── CposCard.tsx
-
-│   │   │   ├── CposContainer.tsx
-
-│   │   │   ├── CposLoadingSpinner.tsx
-
-│   │   │   ├── CposErrorMessage.tsx
-
-│   │   │   └── CposPageHeader.tsx
-
-│   │   └── features/             # Feature-specific components
-
-│   │       └── SubscriptionStatus.tsx
-
+│   │   │   ├── CposButton.tsx           # Button with loading state
+│   │   │   ├── CposCard.tsx             # Standardized card container
+│   │   │   ├── CposContainer.tsx        # Page container wrapper
+│   │   │   ├── CposLoadingSpinner.tsx   # Loading indicator
+│   │   │   ├── CposErrorMessage.tsx     # Error display with retry
+│   │   │   ├── CposPageHeader.tsx       # Page title with actions
+│   │   │   ├── CposBadge.tsx            # Status/category badges
+│   │   │   ├── CposBox.tsx              # MUI Box wrapper
+│   │   │   ├── CposText.tsx             # MUI Typography wrapper
+│   │   │   ├── CposStack.tsx            # Vertical stack layout
+│   │   │   ├── CposDivider.tsx          # Horizontal divider
+│   │   │   ├── CposInfoRow.tsx          # Label-value pair display
+│   │   │   ├── CposCardHeader.tsx       # Card header with action
+│   │   │   ├── CposFlexBetween.tsx      # Flex space-between layout 
+│   │   │   └── index.ts                 # Barrel exports
+│   │   ├── views/             # Feature-specific components
+│   │   │   └── SubscriptionStatus.tsx
+│   │   └── ProtectedRoute.tsx    # Authentication guard
 │   ├── types/                    # TypeScript definitions
-
 │   │   ├── subscription.ts
-
 │   │   ├── apiTpyes.ts
-
 │   │   └── amplify.d.ts
-
 │   ├── utils/                    # Helper functions
-
 │   │   └── api.ts
-
 │   ├── config/                   # Configuration
-
 │   │   └── amplify.ts
-
 │   ├── App.tsx                   # Root component
-
 │   ├── main.tsx                  # Entry point
-
 │   └── theme.ts                  # MUI theme configuration
-
 │
-
 ├── amplify/
-
 │   ├── auth/                     # Cognito configuration
-
 │   │   └── resource.ts
-
 │   ├── functions/
-
 │   │   ├── get-subscription-status/
-
 │   │   │   ├── handler.ts        # Fetch subscription from Stripe
-
 │   │   │   ├── resource.ts
-
 │   │   │   └── package.json
-
-│   │   └── create-billing-portal/
-
-│   │       ├── handler.ts        # Generate Stripe portal URL
-
-│   │       ├── resource.ts
-
-│   │       └── package.json
-
+│   │   ├── create-billing-portal/
+│   │   │   ├── handler.ts        # Generate Stripe portal URL
+│   │   │   ├── resource.ts       # Lambda configuration
+│   │   │   └── package.json
+│   │   └── shared/               # Shared utilities
+│   │       ├── auth-utils.ts     # JWT validation
+│   │       ├── stripe-client.ts  # Stripe SDK singleton
+│   │       ├── response-utils.ts # API response helpers
+│   │       └── load-env.ts       # Environment loader
 │   ├── backend.ts                # Main backend configuration
-
 │   └── package.json
-
 │
-
 ├── package.json
-
 ├── tsconfig.json
-
 ├── vite.config.ts
-
 └── README.md
 
 ```
 
 ## 🏗 Architecture
 
- 
-
 ```
-
 ┌─────────────────┐
-
 │   User Browser  │
-
 └────────┬────────┘
-
          │
-
          ▼
-
 ┌─────────────────┐
-
 │   React App     │
-
 │  - Login Page   │
-
 │  - Dashboard    │
-
 │  - Subscription │
-
 └────────┬────────┘
-
          │
-
          ▼
-
-┌─────────────────────────────────┐
-
-│      AWS Services               │
-
-│                                 │
-
+┌────────────────────────────────┐
+│      AWS Services              │
+│                                │
 │  ┌──────────────────────────┐  │
-
 │  │    AWS Cognito           │  │
-
 │  │    (Authentication)      │  │
-
 │  └──────────────────────────┘  │
-
-│               │                 │
-
-│               ▼                 │
-
+│               │                │
+│               ▼                │
 │  ┌──────────────────────────┐  │
-
 │  │   Amplify Functions      │  │
-
 │  │  - getSubscriptionStatus │  │
-
 │  │  - createBillingPortal   │  │
-
 │  └──────────────────────────┘  │
-
-└──────────────┬──────────────────┘
-
+└──────────────┬─────────────────┘
                │
-
                ▼
-
         ┌──────────────┐
-
         │  Stripe API  │
-
         │  (Test Mode) │
-
         └──────────────┘
-
 ```
 
 ## 🚦 Getting Started
@@ -259,27 +192,17 @@ subscription-status-viewer/
    npm install
 
    ```
-
- 
-
 3. **Configure environment variables**
-
- 
-
-   Create a `.env.local` file in the root directory:
-
+   Create a `.env` file in the root directory:
    ```env
-
-   VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
-
+   # Stripe API Keys (Required)
    STRIPE_SECRET_KEY=sk_test_...
-
    STRIPE_TEST_CUSTOMER_ID=cus_...
-
+   # CORS Configuration (Optional)
+   # For development: Leave commented out to allow all origins
+   # For production: Set to your frontend domain
+   # ALLOWED_ORIGIN=https://yourdomain.com
    ```
-
- 
-
 4. **Deploy Amplify backend**
 
    ```bash
@@ -287,9 +210,6 @@ subscription-status-viewer/
    npx ampx sandbox
 
    ```
-
- 
-
 5. **Start development server**
 
    ```bash
@@ -297,31 +217,16 @@ subscription-status-viewer/
    npm run dev
 
    ```
-
- 
-
 6. **Open browser**
 
    Navigate to `http://localhost:5173`
-
- 
-
 ## 🔌 API Endpoints
-
- 
 
 ### GET Subscription Status
 
- 
-
 Fetches the current subscription status for the authenticated user.
-
- 
-
 **Response:**
-
 ```typescript
-
 {
 
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'none',
@@ -331,17 +236,12 @@ Fetches the current subscription status for the authenticated user.
   renewalDate?: string,
 
   renewalPeriod?: 'month' | 'year'
-
 }
 
 ```
 ### POST Create Billing Portal
 
- 
-
 Creates a Stripe Billing Portal session for the user.
-
- 
 
 **Request:**
 
@@ -398,39 +298,29 @@ Currently polling the Stripe API on demand rather than real-time webhooks.
 **Future**: Add webhook handlers for real-time subscription updates.
 
 ## 🔒 Security
-
-- ✅ Stripe secret keys stored in environment variables
-
-- ✅ All API calls authenticated via Cognito JWT
-
-- ✅ User isolation: users can only access their own subscription data
-
-- ✅ HTTPS enforced for all communications
-
-- ✅ No sensitive data stored in frontend
+- ✅ **Protected Routes**: ProtectedRoute component prevents unauthorized access to dashboard and subscription pages
+- ✅ **Environment Variables**: Stripe secret keys stored server-side with runtime validation
+- ✅ **CORS Configuration**: Configurable allowed origins via `ALLOWED_ORIGIN` environment variable
+- ✅ **JWT Authentication**: All API calls authenticated via Cognito JWT tokens
+- ✅ **User Isolation**: Users can only access their own subscription data (validated server-side)
+- ✅ **IAM Permissions**: Lambda functions restricted to authenticated Cognito users only
+- ✅ **HTTPS Enforced**: All communications encrypted in transit
+- ✅ **No Client Secrets**: Stripe secret keys never exposed to frontend
 
 ## 🧪 Development
 
 ### Available Scripts
 
 ```bash
-
 npm run dev      # Start development server
-
 npm run build    # Build for production
-
 npm run preview  # Preview production build
-
 npm run lint     # Run ESLint
-
 ```
 ### Code Style
 - TypeScript for type safety
-
 - ESLint for code quality
-
 - Functional components with hooks
-
 - Consistent file naming (PascalCase for components, camelCase for utilities)
 
 ## 📦 Build and Deploy
@@ -438,39 +328,23 @@ npm run lint     # Run ESLint
 ### Build for Production
 
 ```bash
-
 npm run build
-
 ```
 ### Deploy to AWS
-
 ```bash
-
 npx ampx sandbox delete  # Clean up sandbox
-
 npx ampx pipeline-deploy --branch main  # Deploy to production
-
 ```
 ## 🔮 Future Enhancements
-
 - [ ] **Real-time Updates**: Stripe webhook handlers for instant status changes
-
 - [ ] **Database Integration**: DynamoDB for user-customer mapping
-
 - [ ] **Billing History**: Table view of past invoices and payments
-
-- [ ] **Analytics**: Amplitude or similar for user behavior tracking
-
+- [ ] **Analytics**: Amplitude or similar for user behaviour tracking
 - [ ] **Testing**: Unit and integration tests with Vitest/Jest
-
 - [ ] **Multiple Plans**: Support for tiered subscription management
-
 - [ ] **Usage Metrics**: Track and display usage limits per plan
-
 - [ ] **Email Notifications**: Automated alerts for payment issues
-
 ---
 ## 👤 Author
 **Chaohao Zhu**
-
 Built with ❤️ using TypeScript, React, AWS Amplify, and Stripe
