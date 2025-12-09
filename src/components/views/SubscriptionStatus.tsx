@@ -8,7 +8,7 @@ import {
   CposDivider,
   CposBadge,
   CposStack,
-} from "../../components/ui";
+} from "../ui";
 
 interface SubscriptionStatusProps {
   data: SubscriptionData;

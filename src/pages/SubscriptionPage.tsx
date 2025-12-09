@@ -13,7 +13,7 @@ import {
   CposLoadingSpinner,
   CposPageHeader,
 } from "../components/ui";
-import { SubscriptionStatus } from "../components/features/SubscriptionStatus";
+import { SubscriptionStatus } from "../components/views/SubscriptionStatus";
 import { useSignOut } from "../hooks/useSignOut";
 
 /**
