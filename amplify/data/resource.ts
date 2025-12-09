@@ -1,4 +1,4 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
 /*== STEP 1 ===============================================================
 The section below creates a Todo database table with a "content" field. Try
@@ -6,12 +6,29 @@ adding a new "isDone" field as a boolean. The authorization rule below
 specifies that any unauthenticated user can "create", "read", "update", 
 and "delete" any "Todo" records.
 =========================================================================*/
+
 const schema = a.schema({
-  Todo: a
+  UserStripeMapping: a
     .model({
-      content: a.string(),
+      userId: a.id().required(),
+      stripeCustomerId: a.string().required(),
+      email: a.email(),
+      createdAt: a.datetime(),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [allow.authenticated().to(["read"])]),
+
+  SubscriptionCache: a
+    .model({
+      stripeCustomerId: a.id().required(),
+      status: a.string().required(),
+      planName: a.string(),
+      planId: a.string(),
+      currentPeriodEnd: a.datetime(),
+      cancelAtPeriodEnd: a.boolean(),
+      updatedAt: a.datetime().required(),
+      lastSyncedFromStripe: a.datetime(),
+    })
+    .authorization((allow) => [allow.authenticated().to(["read"])]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,7 +36,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'identityPool',
+    defaultAuthorizationMode: "userPool",
   },
 });
 
