@@ -2,14 +2,9 @@ import { defineFunction } from "@aws-amplify/backend";
 import "../shared/load-env.js";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-const stripeCustomerId = process.env.STRIPE_TEST_CUSTOMER_ID;
 
 if (!stripeSecretKey) {
   throw new Error("STRIPE_SECRET_KEY environment variable is required");
-}
-
-if (!stripeCustomerId) {
-  throw new Error("STRIPE_TEST_CUSTOMER_ID environment variable is required");
 }
 
 export const getSubscriptionStatus = defineFunction({
@@ -17,6 +12,11 @@ export const getSubscriptionStatus = defineFunction({
   entry: "./handler.ts",
   environment: {
     STRIPE_SECRET_KEY: stripeSecretKey,
-    STRIPE_TEST_CUSTOMER_ID: stripeCustomerId,
+    USER_STRIPE_CUSTOMER_DEFAULT:
+      process.env.USER_STRIPE_CUSTOMER_DEFAULT || "",
+
+    USER_STRIPE_CUSTOMER_A43824B8_1071_705B_8EEF_120AA7E641D6:
+      process.env.USER_STRIPE_CUSTOMER_A43824B8_1071_705B_8EEF_120AA7E641D6 ||
+      "",
   },
 });

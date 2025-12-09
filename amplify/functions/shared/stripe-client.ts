@@ -1,20 +1,58 @@
 import Stripe from "stripe";
 
-// Singleton pattern - only create Stripe instance once
-let stripeInstance: Stripe | null = null;
+/**
+ * Initialize Stripe client with secret key from environment
+ */
+export const getStripeClient = (): Stripe => {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
 
-export function getStripeClient(): Stripe {
-  if (!stripeInstance) {
-    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      apiVersion: "2025-02-24.acacia",
-    });
+  if (!secretKey) {
+    throw new Error("STRIPE_SECRET_KEY environment variable is not set");
   }
-  return stripeInstance;
-}
 
-// Helper to get customer ID for current user
-export function getCustomerId(userId: string): string {
-  // For MVP: hardcoded mapping
-  // TODO: Replace with database lookup in production
-  return process.env.STRIPE_TEST_CUSTOMER_ID!;
-}
+  return new Stripe(secretKey, {
+    apiVersion: "2025-02-24.acacia",
+  });
+};
+
+/**
+ * Map Cognito user ID to Stripe customer ID
+ *
+ * UPDATED: Now supports multiple users through environment variables
+ *
+ * Mapping strategy:
+ * 1. Try USER_STRIPE_CUSTOMER_<userId> (exact match)
+ * 2. Fallback to USER_STRIPE_CUSTOMER_DEFAULT
+ *
+ * @param userId - Cognito user ID (from JWT token)
+ * @returns Stripe customer ID
+ * @throws Error if no mapping found
+ */
+export const getCustomerId = (userId: string): string => {
+  // Sanitize userId for use in environment variable name
+  // Replace hyphens with underscores for valid env var names
+  const sanitizedUserId = userId.replace(/-/g, "_").toUpperCase();
+  const userSpecificEnvVar = `USER_STRIPE_CUSTOMER_${sanitizedUserId}`;
+
+  // Try user-specific mapping first
+  let customerId = process.env[userSpecificEnvVar];
+
+  if (customerId) {
+    console.log(`Found user-specific mapping: ${userId} -> ${customerId}`);
+    return customerId;
+  }
+
+  // Fallback to default customer
+  customerId = process.env.USER_STRIPE_CUSTOMER_DEFAULT;
+
+  if (customerId) {
+    console.log(`Using default customer mapping: ${userId} -> ${customerId}`);
+    return customerId;
+  }
+
+  // No mapping found - throw error
+  throw new Error(
+    `No Stripe customer mapping found for user: ${userId}. ` +
+      `Please set ${userSpecificEnvVar} or USER_STRIPE_CUSTOMER_DEFAULT environment variable.`
+  );
+};
