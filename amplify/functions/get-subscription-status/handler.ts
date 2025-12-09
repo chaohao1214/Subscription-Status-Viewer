@@ -77,7 +77,7 @@ export const handler: APIGatewayProxyHandler = async (
 
     return errorResponse(
       "Internal server error",
-      error instanceof Error ? error.message : "Unknow error"
+      error instanceof Error ? error.message : "Unknown error"
     );
   }
 };

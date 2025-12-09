@@ -6,7 +6,7 @@ import {
   CposContainer,
   CposPageHeader,
 } from "../components/ui";
-import { Button, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 import { useSignOut } from "../hooks/useSignOut";
 
 const DashboardPage: React.FC = () => {
@@ -19,9 +19,9 @@ const DashboardPage: React.FC = () => {
       <CposPageHeader
         title="Dashboard"
         actions={
-          <Button variant="outlined" onClick={handleSignOut}>
+          <CposButton variant="outlined" onClick={handleSignOut}>
             Sign Out
-          </Button>
+          </CposButton>
         }
       />
       <CposCard>
