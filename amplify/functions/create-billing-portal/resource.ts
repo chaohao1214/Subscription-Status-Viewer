@@ -19,4 +19,5 @@ export const createBillingPortal = defineFunction({
       process.env.USER_STRIPE_CUSTOMER_A43824B8_1071_705B_8EEF_120AA7E641D6 ||
       "",
   },
+  resourceGroupName: "data",
 });

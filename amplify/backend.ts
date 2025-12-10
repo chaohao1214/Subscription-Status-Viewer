@@ -6,9 +6,6 @@ import { createBillingPortal } from "./functions/create-billing-portal/resource"
 import { stripeWebhook } from "./functions/stripe-webhook/resource";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 
-/**
- * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
- */
 const backend = defineBackend({
   auth,
   data,
@@ -17,25 +14,52 @@ const backend = defineBackend({
   stripeWebhook,
 });
 
-// Grant authenticated users permission to invoke functions
-backend.getSubscriptionStatus.resources.lambda.grantInvoke(
-  backend.auth.resources.authenticatedUserIamRole
+// DynamoDB access policy
+const dynamoDbPolicy = new PolicyStatement({
+  actions: [
+    "dynamodb:GetItem",
+    "dynamodb:PutItem",
+    "dynamodb:UpdateItem",
+    "dynamodb:Query",
+    "dynamodb:Scan",
+  ],
+  resources: [
+    backend.data.resources.tables["UserStripeMapping"].tableArn,
+    backend.data.resources.tables["SubscriptionCache"].tableArn,
+  ],
+});
+
+backend.stripeWebhook.resources.lambda.addToRolePolicy(dynamoDbPolicy);
+backend.getSubscriptionStatus.resources.lambda.addToRolePolicy(dynamoDbPolicy);
+
+// Add table names to Lambda environment
+backend.stripeWebhook.resources.cfnResources.cfnFunction.addPropertyOverride(
+  "Environment.Variables.USER_STRIPE_MAPPING_TABLE",
+  backend.data.resources.tables["UserStripeMapping"].tableName
+);
+backend.stripeWebhook.resources.cfnResources.cfnFunction.addPropertyOverride(
+  "Environment.Variables.SUBSCRIPTION_CACHE_TABLE",
+  backend.data.resources.tables["SubscriptionCache"].tableName
 );
 
-backend.createBillingPortal.resources.lambda.grantInvoke(
-  backend.auth.resources.authenticatedUserIamRole
+backend.getSubscriptionStatus.resources.cfnResources.cfnFunction.addPropertyOverride(
+  "Environment.Variables.USER_STRIPE_MAPPING_TABLE",
+  backend.data.resources.tables["UserStripeMapping"].tableName
+);
+backend.getSubscriptionStatus.resources.cfnResources.cfnFunction.addPropertyOverride(
+  "Environment.Variables.SUBSCRIPTION_CACHE_TABLE",
+  backend.data.resources.tables["SubscriptionCache"].tableName
 );
 
+// Lambda invoke permissions - using wildcard to avoid circular dependency
 backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
   new PolicyStatement({
     actions: ["lambda:InvokeFunction"],
-    resources: [
-      backend.getSubscriptionStatus.resources.lambda.functionArn,
-      backend.createBillingPortal.resources.lambda.functionArn,
-    ],
+    resources: ["*"],
   })
 );
 
+// Output function ARNs
 backend.addOutput({
   custom: {
     lambdaFunctions: {
@@ -43,6 +67,7 @@ backend.addOutput({
         backend.getSubscriptionStatus.resources.lambda.functionArn,
       createBillingPortal:
         backend.createBillingPortal.resources.lambda.functionArn,
+      stripeWebhook: backend.stripeWebhook.resources.lambda.functionArn,
     },
   },
 });

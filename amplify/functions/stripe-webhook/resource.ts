@@ -20,4 +20,5 @@ export const stripeWebhook = defineFunction({
     STRIPE_WEBHOOK_SECRET: stripeWebhookSecret,
   },
   timeoutSeconds: 30,
+  resourceGroupName: "data",
 });
