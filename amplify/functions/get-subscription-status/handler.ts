@@ -10,17 +10,39 @@ import {
   successResponse,
   unauthorizedResponse,
 } from "../shared/response-utils";
+import {
+  getSubscriptionCache,
+  isCacheFresh,
+  saveSubscriptionCache,
+  SubscriptionCache,
+  SubscriptionItem,
+} from "../shared/dynamodb-utils";
 
 export const handler: APIGatewayProxyHandler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   try {
-    // Validate authentication
     const userId = validateAuthentication(event);
     const stripe = getStripeClient();
     const customerId = getCustomerId(userId);
 
-    // Map user ID to Stripe Customer ID (hardcoded for MVP)
+    // Check cache first
+    const cachedData = await getSubscriptionCache(customerId);
+
+    if (cachedData && isCacheFresh(cachedData)) {
+      console.log("Returning cached subscription data for:", customerId);
+      return successResponse({
+        status: cachedData.status,
+        planName: cachedData.planName,
+        renewalDate: cachedData.currentPeriodEnd,
+        cancelAtPeriodEnd: cachedData.cancelAtPeriodEnd,
+        subscriptions: cachedData.subscriptions || [],
+        fromCache: true,
+      });
+    }
+
+    // Cache miss or stale - fetch from Stripe
+    console.log("Cache miss, fetching from Stripe for:", customerId);
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
@@ -28,7 +50,14 @@ export const handler: APIGatewayProxyHandler = async (
     });
 
     if (subscriptions.data.length === 0) {
-      return successResponse({ status: "none" });
+      await saveSubscriptionCache({
+        stripeCustomerId: customerId,
+        status: "none",
+        subscriptions: [],
+        updatedAt: new Date().toISOString(),
+        lastSyncedFromStripe: new Date().toISOString(),
+      });
+      return successResponse({ status: "none", subscriptions: [] });
     }
 
     // Sort subscriptions by priority
@@ -39,13 +68,14 @@ export const handler: APIGatewayProxyHandler = async (
       return aPriority - bPriority;
     });
 
-    // Get primary subscription (highest priority)
+    // Get primary subscription
     const primarySubscription = sortedSubscriptions[0];
     const primaryProductId = primarySubscription.items.data[0].price
       .product as string;
     const primaryProduct = await stripe.products.retrieve(primaryProductId);
 
-    const allSubscriptions = await Promise.all(
+    // Build all subscriptions array
+    const allSubscriptions: SubscriptionItem[] = await Promise.all(
       sortedSubscriptions.map(async (sub) => {
         const productId = sub.items.data[0].price.product as string;
         const product = await stripe.products.retrieve(productId);
@@ -58,6 +88,23 @@ export const handler: APIGatewayProxyHandler = async (
         };
       })
     );
+
+    // Save to cache with all subscriptions
+    const cacheData: SubscriptionCache = {
+      stripeCustomerId: customerId,
+      status: primarySubscription.status,
+      planName: primaryProduct.name,
+      planId: primaryProductId,
+      currentPeriodEnd: new Date(
+        primarySubscription.current_period_end * 1000
+      ).toISOString(),
+      cancelAtPeriodEnd: primarySubscription.cancel_at_period_end,
+      subscriptions: allSubscriptions,
+      updatedAt: new Date().toISOString(),
+      lastSyncedFromStripe: new Date().toISOString(),
+    };
+    await saveSubscriptionCache(cacheData);
+
     const response = {
       status: primarySubscription.status,
       planName: primaryProduct.name,
@@ -66,11 +113,13 @@ export const handler: APIGatewayProxyHandler = async (
       ).toISOString(),
       renewalPeriod:
         primarySubscription.items.data[0].price.recurring?.interval || "month",
+      cancelAtPeriodEnd: primarySubscription.cancel_at_period_end,
       subscriptions: allSubscriptions,
+      fromCache: false,
     };
+
     return successResponse(response);
   } catch (error) {
-    // Handle authentication errors specifically
     if (error instanceof Error && error.message === "User not authenticated") {
       return unauthorizedResponse();
     }

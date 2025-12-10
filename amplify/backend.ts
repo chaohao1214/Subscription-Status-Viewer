@@ -5,6 +5,7 @@ import { getSubscriptionStatus } from "./functions/get-subscription-status/resou
 import { createBillingPortal } from "./functions/create-billing-portal/resource";
 import { stripeWebhook } from "./functions/stripe-webhook/resource";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { FunctionUrlAuthType } from "aws-cdk-lib/aws-lambda";
 
 const backend = defineBackend({
   auth,
@@ -59,6 +60,10 @@ backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
   })
 );
 
+const webhookFunctionUrl =
+  backend.stripeWebhook.resources.lambda.addFunctionUrl({
+    authType: FunctionUrlAuthType.NONE,
+  });
 // Output function ARNs
 backend.addOutput({
   custom: {
@@ -68,6 +73,7 @@ backend.addOutput({
       createBillingPortal:
         backend.createBillingPortal.resources.lambda.functionArn,
       stripeWebhook: backend.stripeWebhook.resources.lambda.functionArn,
+      stripeWebhookUrl: webhookFunctionUrl.url,
     },
   },
 });

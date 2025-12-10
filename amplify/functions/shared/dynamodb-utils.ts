@@ -7,7 +7,6 @@ import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 
 const client = new DynamoDBClient({});
 
-// Table names from environment variables
 const getUserStripeMappingTableName = () => {
   const tableName = process.env.USER_STRIPE_MAPPING_TABLE;
   if (!tableName) {
@@ -25,7 +24,7 @@ const getSubscriptionCacheTableName = () => {
 };
 
 // ============================================
-// UserStripeMapping operations
+// UserStripeMapping
 // ============================================
 
 export interface UserStripeMapping {
@@ -42,7 +41,7 @@ export async function getUserStripeMapping(
     const result = await client.send(
       new GetItemCommand({
         TableName: getUserStripeMappingTableName(),
-        Key: marshall({ userId }),
+        Key: marshall({ id: userId }),
       })
     );
 
@@ -53,7 +52,7 @@ export async function getUserStripeMapping(
     return unmarshall(result.Item) as UserStripeMapping;
   } catch (error) {
     console.error("Error getting user stripe mapping:", error);
-    throw error;
+    return null;
   }
 }
 
@@ -65,6 +64,7 @@ export async function saveUserStripeMapping(
       new PutItemCommand({
         TableName: getUserStripeMappingTableName(),
         Item: marshall({
+          id: mapping.userId,
           ...mapping,
           createdAt: mapping.createdAt || new Date().toISOString(),
         }),
@@ -77,8 +77,16 @@ export async function saveUserStripeMapping(
 }
 
 // ============================================
-// SubscriptionCache operations
+// SubscriptionCache
 // ============================================
+
+export interface SubscriptionItem {
+  id: string;
+  status: string;
+  planName: string;
+  renewalDate: string;
+  renewalPeriod: string;
+}
 
 export interface SubscriptionCache {
   stripeCustomerId: string;
@@ -87,6 +95,7 @@ export interface SubscriptionCache {
   planId?: string;
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
+  subscriptions?: SubscriptionItem[];
   updatedAt: string;
   lastSyncedFromStripe?: string;
 }
@@ -95,10 +104,13 @@ export async function getSubscriptionCache(
   stripeCustomerId: string
 ): Promise<SubscriptionCache | null> {
   try {
+    const tableName = getSubscriptionCacheTableName();
+    console.log("Getting subscription cache:", { tableName, stripeCustomerId });
+
     const result = await client.send(
       new GetItemCommand({
-        TableName: getSubscriptionCacheTableName(),
-        Key: marshall({ stripeCustomerId }),
+        TableName: tableName,
+        Key: marshall({ id: stripeCustomerId }),
       })
     );
 
@@ -106,10 +118,25 @@ export async function getSubscriptionCache(
       return null;
     }
 
-    return unmarshall(result.Item) as SubscriptionCache;
+    const data = unmarshall(result.Item) as any;
+
+    // Parse subscriptions from JSON string
+    let subscriptions: SubscriptionItem[] | undefined;
+    if (data.subscriptionsJson) {
+      try {
+        subscriptions = JSON.parse(data.subscriptionsJson);
+      } catch {
+        console.error("Failed to parse subscriptionsJson");
+      }
+    }
+
+    return {
+      ...data,
+      subscriptions,
+    } as SubscriptionCache;
   } catch (error) {
     console.error("Error getting subscription cache:", error);
-    throw error;
+    return null;
   }
 }
 
@@ -117,13 +144,29 @@ export async function saveSubscriptionCache(
   cache: SubscriptionCache
 ): Promise<void> {
   try {
+    // Convert subscriptions array to JSON string for storage
+    const subscriptionsJson = cache.subscriptions
+      ? JSON.stringify(cache.subscriptions)
+      : undefined;
+
     await client.send(
       new PutItemCommand({
         TableName: getSubscriptionCacheTableName(),
-        Item: marshall({
-          ...cache,
-          updatedAt: new Date().toISOString(),
-        }),
+        Item: marshall(
+          {
+            id: cache.stripeCustomerId,
+            stripeCustomerId: cache.stripeCustomerId,
+            status: cache.status,
+            planName: cache.planName,
+            planId: cache.planId,
+            currentPeriodEnd: cache.currentPeriodEnd,
+            cancelAtPeriodEnd: cache.cancelAtPeriodEnd,
+            subscriptionsJson,
+            updatedAt: new Date().toISOString(),
+            lastSyncedFromStripe: cache.lastSyncedFromStripe,
+          },
+          { removeUndefinedValues: true }
+        ),
       })
     );
     console.log("Subscription cache saved:", cache.stripeCustomerId);

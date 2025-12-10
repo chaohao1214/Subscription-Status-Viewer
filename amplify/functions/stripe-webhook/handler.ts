@@ -5,19 +5,18 @@ import {
   errorResponse,
   successResponse,
 } from "../shared/response-utils";
+import {
+  saveSubscriptionCache,
+  type SubscriptionCache,
+} from "../shared/dynamodb-utils";
+import type Stripe from "stripe";
 
 /**
  * Stripe Webhook Handler
  *
  * Receives webhook events from Stripe when subscription changes occur.
- * Events include: subscription created/updated/deleted, invoice paid/failed.
- *
- * This handler:
- * 1. Verifies the webhook signature for security
- * 2. Processes the event (Phase 3: will update DynamoDB)
- * 3. Returns 200 to acknowledge receipt to Stripe
+ * Updates SubscriptionCache in DynamoDB for real-time status sync.
  */
-
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
     console.log("Received webhook event");
@@ -39,15 +38,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       console.warn(
         "Using placeholder webhook secret - signature verification skipped"
       );
-      // For initial testing, we'll skip verification
-      // TODO: Configure real webhook secret after deployment
       const body = JSON.parse(event.body || "{}");
       console.log("Event type:", body.type);
       return successResponse({ received: true, verified: false });
     }
 
     // Verify webhook signature (ensures request is from Stripe)
-    let stripeEvent;
+    let stripeEvent: Stripe.Event;
     try {
       stripeEvent = stripe.webhooks.constructEvent(
         event.body!,
@@ -64,26 +61,38 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       id: stripeEvent.id,
     });
 
-    // TODO Phase 3: Handle different event types and update DynamoDB
+    // Handle subscription events
     switch (stripeEvent.type) {
       case "customer.subscription.created":
-        console.log("Subscription created:", stripeEvent.data.object.id);
-        break;
-
       case "customer.subscription.updated":
-        console.log("Subscription updated:", stripeEvent.data.object.id);
-        break;
-
       case "customer.subscription.deleted":
-        console.log("Subscription deleted:", stripeEvent.data.object.id);
+        await handleSubscriptionEvent(
+          stripe,
+          stripeEvent.data.object as Stripe.Subscription
+        );
         break;
 
       case "invoice.paid":
         console.log("Invoice paid:", stripeEvent.data.object.id);
+        // Optionally refresh subscription cache after payment
+        const paidInvoice = stripeEvent.data.object as Stripe.Invoice;
+        if (paidInvoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(
+            paidInvoice.subscription as string
+          );
+          await handleSubscriptionEvent(stripe, subscription);
+        }
         break;
 
       case "invoice.payment_failed":
         console.log("Payment failed:", stripeEvent.data.object.id);
+        const failedInvoice = stripeEvent.data.object as Stripe.Invoice;
+        if (failedInvoice.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(
+            failedInvoice.subscription as string
+          );
+          await handleSubscriptionEvent(stripe, subscription);
+        }
         break;
 
       default:
@@ -99,3 +108,63 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     );
   }
 };
+
+/**
+ * Handle subscription events and update DynamoDB cache
+ */
+async function handleSubscriptionEvent(
+  stripe: Stripe,
+  subscription: Stripe.Subscription
+): Promise<void> {
+  console.log("Processing subscription event:", {
+    id: subscription.id,
+    status: subscription.status,
+    customer: subscription.customer,
+  });
+
+  const customerId =
+    typeof subscription.customer === "string"
+      ? subscription.customer
+      : subscription.customer.id;
+
+  // Get product name
+  let planName: string | undefined;
+  let planId: string | undefined;
+
+  try {
+    const priceData = subscription.items.data[0]?.price;
+    if (priceData?.product) {
+      planId =
+        typeof priceData.product === "string"
+          ? priceData.product
+          : priceData.product.id;
+      const product = await stripe.products.retrieve(planId);
+      planName = product.name;
+    }
+  } catch (err) {
+    console.error("Error fetching product:", err);
+  }
+
+  // Build cache data
+  const cacheData: SubscriptionCache = {
+    stripeCustomerId: customerId,
+    status: subscription.status,
+    planName,
+    planId,
+    currentPeriodEnd: new Date(
+      subscription.current_period_end * 1000
+    ).toISOString(),
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    updatedAt: new Date().toISOString(),
+    lastSyncedFromStripe: new Date().toISOString(),
+  };
+
+  // Save to DynamoDB
+  await saveSubscriptionCache(cacheData);
+
+  console.log("Subscription cache updated:", {
+    customerId,
+    status: subscription.status,
+    planName,
+  });
+}

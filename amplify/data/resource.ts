@@ -15,6 +15,7 @@ const schema = a.schema({
       email: a.email(),
       createdAt: a.datetime(),
     })
+    .identifier(["userId"])
     .authorization((allow) => [allow.authenticated().to(["read"])]),
 
   SubscriptionCache: a
@@ -25,9 +26,11 @@ const schema = a.schema({
       planId: a.string(),
       currentPeriodEnd: a.datetime(),
       cancelAtPeriodEnd: a.boolean(),
+      subscriptionsJson: a.string(),
       updatedAt: a.datetime().required(),
       lastSyncedFromStripe: a.datetime(),
     })
+    .identifier(["stripeCustomerId"])
     .authorization((allow) => [allow.authenticated().to(["read"])]),
 });
 
