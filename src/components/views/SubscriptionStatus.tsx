@@ -33,16 +33,10 @@ const STATUS_CONFIG = {
 export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
   data,
 }) => {
-  const hasMultipleSubscriptions =
-    data.subscriptions && data.subscriptions.length > 0;
-
-  // Single subscription or no subscription view
-  if (data.status === "none" || !hasMultipleSubscriptions) {
-    const statusConfig = STATUS_CONFIG[data.status];
-
+  // No subscription
+  if (data.status === "none" || !data.subscriptions?.length) {
     return (
       <CposCard>
-        {/* Header with status badge */}
         <CposBox
           display="flex"
           justifyContent="space-between"
@@ -52,74 +46,35 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
           <CposText variant="h5" fontWeight={600}>
             Subscription Status
           </CposText>
-          <CposBadge label={statusConfig.label} color={statusConfig.color} />
+          <CposBadge
+            label={STATUS_CONFIG.none.label}
+            color={STATUS_CONFIG.none.color}
+          />
         </CposBox>
-
         <CposDivider sx={{ mb: 3 }} />
-
-        {/* Subscription details */}
-        {data.status !== "none" && (
-          <CposStack spacing={2}>
-            {data.planName && (
-              <CposBox>
-                <CposText variant="caption" color="text.secondary">
-                  Plan
-                </CposText>
-                <CposText variant="h6" fontWeight={500}>
-                  {data.planName}
-                </CposText>
-              </CposBox>
-            )}
-
-            {data.renewalDate && (
-              <CposBox>
-                <CposText variant="caption" color="text.secondary">
-                  Next Renewal
-                </CposText>
-                <CposText variant="body1">
-                  {formatDate(data.renewalDate)}
-                </CposText>
-              </CposBox>
-            )}
-
-            {data.renewalPeriod && (
-              <CposBox>
-                <CposText variant="caption" color="text.secondary">
-                  Billing Cycle
-                </CposText>
-                <CposText variant="body1" sx={{ textTransform: "capitalize" }}>
-                  {data.renewalPeriod}ly
-                </CposText>
-              </CposBox>
-            )}
-          </CposStack>
-        )}
-
-        {data.status === "none" && (
-          <CposText variant="body1" color="text.secondary">
-            You don't have an active subscription.
-          </CposText>
-        )}
+        <CposText variant="body1" color="text.secondary">
+          You don't have an active subscription.
+        </CposText>
       </CposCard>
     );
   }
 
-  // Multiple subscriptions view
+  // Has subscriptions
   return (
     <CposBox>
       <CposText variant="h5" fontWeight={600} mb={3}>
         Your Subscriptions
       </CposText>
       <CposStack spacing={3}>
-        {data.subscriptions!.map((subscription, index) => {
+        {data.subscriptions.map((subscription, index) => {
           const statusConfig =
-            STATUS_CONFIG[subscription.status as keyof typeof STATUS_CONFIG];
+            STATUS_CONFIG[subscription.status] || STATUS_CONFIG.none;
+          const isCanceling = subscription.cancelAtPeriodEnd;
 
           return (
             <CposCard
               key={subscription.id}
               sx={{
-                // Highlight primary subscription with border
                 ...(index === 0 && {
                   border: 2,
                   borderColor: "primary.main",
@@ -136,7 +91,6 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
                   <CposText variant="h6" fontWeight={600}>
                     {subscription.planName}
                   </CposText>
-
                   {index === 0 && (
                     <CposBadge
                       label="Primary"
@@ -147,39 +101,54 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
                   )}
                 </CposBox>
                 <CposBadge
-                  label={statusConfig.label}
-                  color={statusConfig.color}
+                  label={isCanceling ? "Canceling" : statusConfig.label}
+                  color={isCanceling ? "warning" : statusConfig.color}
                   size="small"
                 />
               </CposBox>
 
+              {/* Cancellation warning */}
+              {isCanceling && (
+                <CposBox
+                  sx={{
+                    backgroundColor: "warning.light",
+                    borderRadius: 1,
+                    p: 1.5,
+                    mb: 2,
+                  }}
+                >
+                  <CposText variant="body2" color="warning.dark">
+                    ⚠️ Cancels on {formatDate(subscription.renewalDate)}
+                  </CposText>
+                </CposBox>
+              )}
+
               <CposDivider sx={{ mb: 2 }} />
 
-              {/* Subscription details */}
               <CposStack spacing={1.5}>
                 <CposBox display="flex" justifyContent="space-between">
                   <CposText variant="body2" color="text.secondary">
-                    Next Renewal
+                    {isCanceling ? "Cancels On" : "Next Renewal"}
                   </CposText>
                   <CposText variant="body2" fontWeight={500}>
-                    {subscription.renewalDate
-                      ? formatDate(subscription.renewalDate)
-                      : "N/A"}
+                    {formatDate(subscription.renewalDate)}
                   </CposText>
                 </CposBox>
 
-                <CposBox display="flex" justifyContent="space-between">
-                  <CposText variant="body2" color="text.secondary">
-                    Billing Cycle
-                  </CposText>
-                  <CposText
-                    variant="body2"
-                    fontWeight={500}
-                    sx={{ textTransform: "capitalize" }}
-                  >
-                    {subscription.renewalPeriod}ly
-                  </CposText>
-                </CposBox>
+                {!isCanceling && (
+                  <CposBox display="flex" justifyContent="space-between">
+                    <CposText variant="body2" color="text.secondary">
+                      Billing Cycle
+                    </CposText>
+                    <CposText
+                      variant="body2"
+                      fontWeight={500}
+                      sx={{ textTransform: "capitalize" }}
+                    >
+                      {subscription.renewalPeriod}ly
+                    </CposText>
+                  </CposBox>
+                )}
               </CposStack>
             </CposCard>
           );
