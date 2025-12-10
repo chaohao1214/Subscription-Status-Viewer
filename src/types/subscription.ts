@@ -11,13 +11,12 @@ export interface SingleSubscription {
   planName: string;
   renewalDate: string;
   renewalPeriod: "month" | "year";
+  cancelAtPeriodEnd?: boolean;
 }
 export interface SubscriptionData {
   status: SubscriptionStatus;
-  planName?: string;
-  renewalDate?: string;
-  renewalPeriod?: string;
   subscriptions?: SingleSubscription[];
+  fromCache?: boolean;
 }
 
 export interface BillingPortalResponse {
