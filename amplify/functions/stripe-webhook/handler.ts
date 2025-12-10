@@ -120,6 +120,7 @@ async function handleSubscriptionEvent(
     id: subscription.id,
     status: subscription.status,
     customer: subscription.customer,
+    current_period_end: subscription.current_period_end,
   });
 
   const customerId =
@@ -145,15 +146,18 @@ async function handleSubscriptionEvent(
     console.error("Error fetching product:", err);
   }
 
+  // Safe date handling
+  const currentPeriodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000).toISOString()
+    : undefined;
+
   // Build cache data
   const cacheData: SubscriptionCache = {
     stripeCustomerId: customerId,
     status: subscription.status,
     planName,
     planId,
-    currentPeriodEnd: new Date(
-      subscription.current_period_end * 1000
-    ).toISOString(),
+    currentPeriodEnd,
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
     updatedAt: new Date().toISOString(),
     lastSyncedFromStripe: new Date().toISOString(),

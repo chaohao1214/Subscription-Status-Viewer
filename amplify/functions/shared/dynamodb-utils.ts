@@ -86,6 +86,8 @@ export interface SubscriptionItem {
   planName: string;
   renewalDate: string;
   renewalPeriod: string;
+  cancelAtPeriodEnd?: boolean;
+  cancelAt?: string;
 }
 
 export interface SubscriptionCache {

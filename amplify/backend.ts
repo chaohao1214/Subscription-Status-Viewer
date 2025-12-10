@@ -4,7 +4,7 @@ import { data } from "./data/resource";
 import { getSubscriptionStatus } from "./functions/get-subscription-status/resource";
 import { createBillingPortal } from "./functions/create-billing-portal/resource";
 import { stripeWebhook } from "./functions/stripe-webhook/resource";
-import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { PolicyStatement, AnyPrincipal } from "aws-cdk-lib/aws-iam";
 import { FunctionUrlAuthType } from "aws-cdk-lib/aws-lambda";
 
 const backend = defineBackend({
@@ -64,6 +64,14 @@ const webhookFunctionUrl =
   backend.stripeWebhook.resources.lambda.addFunctionUrl({
     authType: FunctionUrlAuthType.NONE,
   });
+
+// Grant public access to the webhook URL
+backend.stripeWebhook.resources.lambda.addPermission("PublicInvoke", {
+  principal: new AnyPrincipal(),
+  action: "lambda:InvokeFunctionUrl",
+  functionUrlAuthType: FunctionUrlAuthType.NONE,
+});
+
 // Output function ARNs
 backend.addOutput({
   custom: {

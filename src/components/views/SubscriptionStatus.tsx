@@ -69,7 +69,8 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
         {data.subscriptions.map((subscription, index) => {
           const statusConfig =
             STATUS_CONFIG[subscription.status] || STATUS_CONFIG.none;
-          const isCanceling = subscription.cancelAtPeriodEnd;
+          const isCanceling =
+            subscription.cancelAtPeriodEnd || !!subscription.cancelAt;
 
           return (
             <CposCard
@@ -111,14 +112,18 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
               {isCanceling && (
                 <CposBox
                   sx={{
-                    backgroundColor: "warning.light",
+                    backgroundColor: "#FFF4E5",
+                    borderLeft: "4px solid #FF9800",
                     borderRadius: 1,
                     p: 1.5,
                     mb: 2,
                   }}
                 >
-                  <CposText variant="body2" color="warning.dark">
-                    ⚠️ Cancels on {formatDate(subscription.renewalDate)}
+                  <CposText variant="body2" sx={{ color: "#663C00" }}>
+                    Cancels on{" "}
+                    {formatDate(
+                      subscription.cancelAt || subscription.renewalDate
+                    )}
                   </CposText>
                 </CposBox>
               )}

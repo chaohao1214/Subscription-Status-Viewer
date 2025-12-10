@@ -12,6 +12,7 @@ export interface SingleSubscription {
   renewalDate: string;
   renewalPeriod: "month" | "year";
   cancelAtPeriodEnd?: boolean;
+  cancelAt?: string;
 }
 export interface SubscriptionData {
   status: SubscriptionStatus;
