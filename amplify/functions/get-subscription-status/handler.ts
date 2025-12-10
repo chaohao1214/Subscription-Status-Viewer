@@ -88,7 +88,7 @@ export const handler: APIGatewayProxyHandler = async (
           cancelAtPeriodEnd: sub.cancel_at_period_end,
           cancelAt: sub.cancel_at
             ? new Date(sub.cancel_at * 1000).toISOString()
-            : undefined,
+            : undefined, //cancel read this key
         };
       })
     );
