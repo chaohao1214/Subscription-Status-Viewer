@@ -7,7 +7,9 @@ import { theme } from "./theme.ts";
 import { CssBaseline } from "@mui/material";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "./config/amplify.ts";
+import { initAnalytics } from "./config/amplitude.ts";
 
+initAnalytics();
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
