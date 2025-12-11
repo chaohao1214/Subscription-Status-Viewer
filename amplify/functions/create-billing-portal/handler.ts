@@ -13,7 +13,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Validate authentication
     const userId = validateAuthentication(event);
     const stripe = getStripeClient();
-    const customerId = getCustomerId(userId);
+    const customerId = await getCustomerId(userId);
 
     const body = event.body ? JSON.parse(event.body) : {};
     const returnUrl = body.returnUrl;
