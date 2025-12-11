@@ -15,7 +15,7 @@ import {
 } from "../components/ui";
 import { SubscriptionStatus } from "../components/views/SubscriptionStatus";
 import { useSignOut } from "../hooks/useSignOut";
-
+import * as amplitude from "@amplitude/unified";
 /**
  * Subscription management page
  * Displays current subscription status and provides access to Stripe Billing Portal
@@ -41,6 +41,10 @@ const SubscriptionPage: React.FC = () => {
       setError(null);
       const data = await getSubscriptionStatus();
       setSubscription(data);
+      amplitude.track("Subscription Data Fetched", {
+        status: data.status,
+        subscriptionCount: data.subscriptions?.length || 0,
+      });
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Failed to load subscription"
@@ -51,10 +55,12 @@ const SubscriptionPage: React.FC = () => {
   };
 
   useEffect(() => {
+    amplitude.track("Subscription Page Viewed");
     fetchSubscription();
   }, []);
 
   const handleManageBilling = async () => {
+    amplitude.track("Manage Billing Clicked");
     try {
       setPortalLoading(true);
       const returnUrl = window.location.href;
