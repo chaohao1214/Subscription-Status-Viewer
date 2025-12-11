@@ -73,34 +73,16 @@ export const SubscriptionStatus: React.FC<SubscriptionStatusProps> = ({
             subscription.cancelAtPeriodEnd || !!subscription.cancelAt;
 
           return (
-            <CposCard
-              key={subscription.id}
-              sx={{
-                ...(index === 0 && {
-                  border: 2,
-                  borderColor: "primary.main",
-                }),
-              }}
-            >
+            <CposCard key={subscription.id}>
               <CposBox
                 display="flex"
                 justifyContent="space-between"
                 alignItems="center"
                 mb={2}
               >
-                <CposBox display="flex" alignItems="center" gap={1}>
-                  <CposText variant="h6" fontWeight={600}>
-                    {subscription.planName}
-                  </CposText>
-                  {index === 0 && (
-                    <CposBadge
-                      label="Primary"
-                      color="primary"
-                      variant="outlined"
-                      size="small"
-                    />
-                  )}
-                </CposBox>
+                <CposText variant="h6" fontWeight={600}>
+                  {subscription.planName}
+                </CposText>
                 <CposBadge
                   label={isCanceling ? "Canceling" : statusConfig.label}
                   color={isCanceling ? "warning" : statusConfig.color}
