@@ -1,5 +1,7 @@
+import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import Stripe from "stripe";
 
+const dynamoClient = new DynamoDBClient({});
 /**
  * Initialize Stripe client with secret key from environment
  */
@@ -18,23 +20,46 @@ export const getStripeClient = (): Stripe => {
 /**
  * Map Cognito user ID to Stripe customer ID
  *
- * UPDATED: Now supports multiple users through environment variables
- *
- * Mapping strategy:
- * 1. Try USER_STRIPE_CUSTOMER_<userId> (exact match)
- * 2. Fallback to USER_STRIPE_CUSTOMER_DEFAULT
+ * Strategy:
+ * 1. Try DynamoDB UserStripeMapping table first
+ * 2. Fallback to environment variables (for backwards compatibility)
  *
  * @param userId - Cognito user ID (from JWT token)
  * @returns Stripe customer ID
  * @throws Error if no mapping found
  */
-export const getCustomerId = (userId: string): string => {
-  // Sanitize userId for use in environment variable name
-  // Replace hyphens with underscores for valid env var names
+export const getCustomerId = async (userId: string): Promise<string> => {
+  const tableName = process.env.USER_STRIPE_MAPPING_TABLE;
+
+  if (tableName) {
+    try {
+      const result = await dynamoClient.send(
+        new GetItemCommand({
+          TableName: tableName,
+          Key: {
+            userId: { S: userId },
+          },
+        })
+      );
+      if (result.Item?.stripeCustomerId?.S) {
+        console.log(
+          `Found DynamoDB mapping: ${userId} -> ${result.Item.stripeCustomerId.S}`
+        );
+        return result.Item.stripeCustomerId.S;
+      }
+    } catch (error) {
+      console.warn("DynamoDB lookup failed, falling back to env vars:", error);
+    }
+  }
+
+  /**
+   * since we use DynamoDB, we no longer need the code belows,
+   *  because we complete Stretch Goal -Amplify Data model
+   */
+  // Fallback to environment variables
   const sanitizedUserId = userId.replace(/-/g, "_").toUpperCase();
   const userSpecificEnvVar = `USER_STRIPE_CUSTOMER_${sanitizedUserId}`;
 
-  // Try user-specific mapping first
   let customerId = process.env[userSpecificEnvVar];
 
   if (customerId) {

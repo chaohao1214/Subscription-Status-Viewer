@@ -24,7 +24,7 @@ export const handler: APIGatewayProxyHandler = async (
   try {
     const userId = validateAuthentication(event);
     const stripe = getStripeClient();
-    const customerId = getCustomerId(userId);
+    const customerId = await getCustomerId(userId);
 
     // Check cache first
     const cachedData = await getSubscriptionCache(customerId);
