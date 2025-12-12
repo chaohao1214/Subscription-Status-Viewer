@@ -7,6 +7,7 @@ import {
 } from "../shared/response-utils";
 import {
   saveSubscriptionCache,
+  SubscriptionItem,
   type SubscriptionCache,
 } from "../shared/dynamodb-utils";
 import type Stripe from "stripe";
@@ -120,7 +121,6 @@ async function handleSubscriptionEvent(
     id: subscription.id,
     status: subscription.status,
     customer: subscription.customer,
-    current_period_end: subscription.current_period_end,
   });
 
   const customerId =
@@ -128,47 +128,78 @@ async function handleSubscriptionEvent(
       ? subscription.customer
       : subscription.customer.id;
 
-  // Get product name
-  let planName: string | undefined;
-  let planId: string | undefined;
+  // Fetch ALL subscriptions for this customer
+  const allSubscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+  });
 
-  try {
-    const priceData = subscription.items.data[0]?.price;
-    if (priceData?.product) {
-      planId =
-        typeof priceData.product === "string"
-          ? priceData.product
-          : priceData.product.id;
-      const product = await stripe.products.retrieve(planId);
-      planName = product.name;
-    }
-  } catch (err) {
-    console.error("Error fetching product:", err);
+  // If no subscriptions, save empty cache
+  if (allSubscriptions.data.length === 0) {
+    await saveSubscriptionCache({
+      stripeCustomerId: customerId,
+      status: "none",
+      subscriptions: [],
+      updatedAt: new Date().toISOString(),
+      lastSyncedFromStripe: new Date().toISOString(),
+    });
+    console.log("No subscriptions found, cache updated with status: none");
+    return;
   }
 
-  // Safe date handling
-  const currentPeriodEnd = subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000).toISOString()
-    : undefined;
+  // Sort by priority
+  const priorityOrder = ["active", "trialing", "past_due", "canceled"];
+  const sortedSubscriptions = allSubscriptions.data.sort((a, b) => {
+    const aPriority = priorityOrder.indexOf(a.status);
+    const bPriority = priorityOrder.indexOf(b.status);
+    return aPriority - bPriority;
+  });
 
-  // Build cache data
+  // Get primary subscription info
+  const primarySubscription = sortedSubscriptions[0];
+  const primaryProductId = primarySubscription.items.data[0].price
+    .product as string;
+  const primaryProduct = await stripe.products.retrieve(primaryProductId);
+
+  // Build all subscriptions array
+  const subscriptionsArray: SubscriptionItem[] = await Promise.all(
+    sortedSubscriptions.map(async (sub) => {
+      const productId = sub.items.data[0].price.product as string;
+      const product = await stripe.products.retrieve(productId);
+      return {
+        id: sub.id,
+        status: sub.status,
+        planName: product.name,
+        renewalDate: new Date(sub.current_period_end * 1000).toISOString(),
+        renewalPeriod: sub.items.data[0].price.recurring?.interval || "month",
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+        cancelAt: sub.cancel_at
+          ? new Date(sub.cancel_at * 1000).toISOString()
+          : undefined,
+      };
+    })
+  );
+
+  // Save complete cache data
   const cacheData: SubscriptionCache = {
     stripeCustomerId: customerId,
-    status: subscription.status,
-    planName,
-    planId,
-    currentPeriodEnd,
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    status: primarySubscription.status,
+    planName: primaryProduct.name,
+    planId: primaryProductId,
+    currentPeriodEnd: new Date(
+      primarySubscription.current_period_end * 1000
+    ).toISOString(),
+    cancelAtPeriodEnd: primarySubscription.cancel_at_period_end,
+    subscriptions: subscriptionsArray,
     updatedAt: new Date().toISOString(),
     lastSyncedFromStripe: new Date().toISOString(),
   };
 
-  // Save to DynamoDB
   await saveSubscriptionCache(cacheData);
 
   console.log("Subscription cache updated:", {
     customerId,
-    status: subscription.status,
-    planName,
+    status: primarySubscription.status,
+    subscriptionCount: subscriptionsArray.length,
   });
 }
