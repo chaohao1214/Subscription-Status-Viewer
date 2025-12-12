@@ -5,13 +5,13 @@ A full-stack web application for managing and viewing Stripe subscription status
 ## 🚀 Features
 - **User Authentication**: Secure login with AWS Cognito and protected routes
 
-- **Subscription Management**: View current subscription status and plan details
+- **Subscription Management**: View current subscription status and plan details with support for multiple subscriptions
 
 - **Billing Portal**: Direct integration with Stripe Customer Portal for managing payments
 
-- **Responsive UI**: Modern Material-UI design with custom theming
+- **Real-time Updates**: Stripe webhook integration for instant subscription status changes
 
-- **Real-time Data**: Fetch subscription information directly from the Stripe API
+- **Smart Caching**: DynamoDB-backed caching with 5-minute TTL to reduce API calls
 
 - **Type-Safe**: Full TypeScript implementation across frontend and backend
 
@@ -38,7 +38,11 @@ A full-stack web application for managing and viewing Stripe subscription status
 
 - **AWS Cognito** - User authentication
 
+- **AWS DynamoDB** - User-customer mapping and subscription cache
+
 - **Stripe API** - Payment and subscription management
+
+- **Stripe Webhooks** - Real-time subscription event handling
 
 ## 📸 Screenshots
 
@@ -64,61 +68,72 @@ A full-stack web application for managing and viewing Stripe subscription status
 subscription-status-viewer/
 
 ├── src/
-│   ├── pages/                    # Route components
-│   │   ├── LoginPage.tsx
-│   │   ├── DashboardPage.tsx
-│   │   └── SubscriptionPage.tsx
-│   ├── components/
-│   │   ├── ui/                   # Reusable UI components
-│   │   │   ├── CposButton.tsx           # Button with loading state
-│   │   │   ├── CposCard.tsx             # Standardized card container
-│   │   │   ├── CposContainer.tsx        # Page container wrapper
-│   │   │   ├── CposLoadingSpinner.tsx   # Loading indicator
-│   │   │   ├── CposErrorMessage.tsx     # Error display with retry
-│   │   │   ├── CposPageHeader.tsx       # Page title with actions
-│   │   │   ├── CposBadge.tsx            # Status/category badges
-│   │   │   ├── CposBox.tsx              # MUI Box wrapper
-│   │   │   ├── CposText.tsx             # MUI Typography wrapper
-│   │   │   ├── CposStack.tsx            # Vertical stack layout
-│   │   │   ├── CposDivider.tsx          # Horizontal divider
-│   │   │   ├── CposInfoRow.tsx          # Label-value pair display
-│   │   │   ├── CposCardHeader.tsx       # Card header with action
-│   │   │   ├── CposFlexBetween.tsx      # Flex space-between layout 
-│   │   │   └── index.ts                 # Barrel exports
-│   │   ├── views/             # Feature-specific components
-│   │   │   └── SubscriptionStatus.tsx
-│   │   └── ProtectedRoute.tsx    # Authentication guard
-│   ├── types/                    # TypeScript definitions
-│   │   ├── subscription.ts
-│   │   ├── apiTpyes.ts
-│   │   └── amplify.d.ts
-│   ├── utils/                    # Helper functions
-│   │   └── api.ts
-│   ├── config/                   # Configuration
-│   │   └── amplify.ts
-│   ├── App.tsx                   # Root component
-│   ├── main.tsx                  # Entry point
-│   └── theme.ts                  # MUI theme configuration
+│ ├── pages/ # Route components
+│ │ ├── LoginPage.tsx
+│ │ ├── DashboardPage.tsx
+│ │ └── SubscriptionPage.tsx
+│ ├── components/
+│ │ ├── ui/ # Reusable UI components
+│ │ │ ├── CposButton.tsx  # Button with loading state
+│ │ │ ├── CposCard.tsx    # Standardized card container
+│ │ │ ├── CposContainer.tsx    # Page container wrapper
+│ │ │ ├── CposLoadingSpinner.tsx    # Loading indicator
+│ │ │ ├── CposErrorMessage.tsx   # Error display with retry
+│ │ │ ├── CposPageHeader.tsx   # Page title with actions
+│ │ │ ├── CposBadge.tsx    # Status/category badges
+│ │ │ ├── CposBox.tsx    # MUI Box wrapper
+│ │ │ ├── CposText.tsx    # MUI Typography wrapper
+│ │ │ ├── CposStack.tsx   # Vertical stack layout
+│ │ │ ├── CposDivider.tsx    # Horizontal divider
+│ │ │ ├── CposInfoRow.tsx    # Label-value pair display
+│ │ │ ├── CposCardHeader.tsx    # Card header with action
+│ │ │ ├── CposFlexBetween.tsx    # Flex space-between layout
+│ │ │ └── index.ts    # Barrel exports
+│ │ ├── views/ # Feature-specific components
+│ │ │ └── SubscriptionStatus.tsx
+│ │ └── ProtectedRoute.tsx # Authentication guard
+│ ├── types/ # TypeScript definitions
+│ │ ├── subscription.ts
+│ │ ├── apiTpyes.ts
+│ │ └── amplify.d.ts
+│ ├── utils/ # Helper functions
+│ │ └── utils.ts
+│ ├── api/ # API client
+│ │ └── apiEndpoints.ts
+│ ├── hooks/ # Custom React hooks
+│ │ └── useSignOut.ts
+│ ├── config/ # Configuration
+│ │ └── amplify.ts
+│ ├── App.tsx # Root component
+│ ├── main.tsx # Entry point
+│ └── theme.ts # MUI theme configuration
 │
 ├── amplify/
-│   ├── auth/                     # Cognito configuration
-│   │   └── resource.ts
-│   ├── functions/
-│   │   ├── get-subscription-status/
-│   │   │   ├── handler.ts        # Fetch subscription from Stripe
-│   │   │   ├── resource.ts
-│   │   │   └── package.json
-│   │   ├── create-billing-portal/
-│   │   │   ├── handler.ts        # Generate Stripe portal URL
-│   │   │   ├── resource.ts       # Lambda configuration
-│   │   │   └── package.json
-│   │   └── shared/               # Shared utilities
-│   │       ├── auth-utils.ts     # JWT validation
-│   │       ├── stripe-client.ts  # Stripe SDK singleton
-│   │       ├── response-utils.ts # API response helpers
-│   │       └── load-env.ts       # Environment loader
-│   ├── backend.ts                # Main backend configuration
-│   └── package.json
+│ ├── auth/ # Cognito configuration
+│ │ └── resource.ts
+│ ├── data/ # DynamoDB schema
+│ │ └── resource.ts # UserStripeMapping & SubscriptionCache tables
+│ ├── functions/
+│ │ ├── get-subscription-status/
+│ │ │ ├── handler.ts # Fetch subscription (with cache check)
+│ │ │ ├── resource.ts
+│ │ │ └── package.json
+│ │ ├── create-billing-portal/
+│ │ │ ├── handler.ts # Generate Stripe portal URL
+│ │ │ ├── resource.ts # Lambda configuration
+│ │ │ └── package.json
+│ │ ├── stripe-webhook/
+│ │ │ ├── handler.ts # Handle Stripe events
+│ │ │ ├── resource.ts # Lambda with public URL
+│ │ │ └── package.json
+│ │ └── shared/ # Shared utilities
+│ │ ├── auth-utils.ts # JWT validation
+│ │ ├── stripe-client.ts # Stripe SDK singleton
+│ │ ├── response-utils.ts # API response helpers
+│ │ ├── dynamodb-utils.ts # DynamoDB operations
+│ │ └── load-env.ts # Environment loader
+│ ├── backend.ts # Main backend configuration
+│ └── package.json
 │
 ├── package.json
 ├── tsconfig.json
@@ -131,39 +146,47 @@ subscription-status-viewer/
 
 ```
 ┌─────────────────┐
-│   User Browser  │
+│ User Browser │
 └────────┬────────┘
-         │
-         ▼
+│
+▼
 ┌─────────────────┐
-│   React App     │
-│  - Login Page   │
-│  - Dashboard    │
-│  - Subscription │
+│ React App │
+│ - Login Page │
+│ - Dashboard │
+│ - Subscription │
 └────────┬────────┘
-         │
-         ▼
+│
+▼
 ┌────────────────────────────────┐
-│      AWS Services              │
-│                                │
-│  ┌──────────────────────────┐  │
-│  │    AWS Cognito           │  │
-│  │    (Authentication)      │  │
-│  └──────────────────────────┘  │
-│               │                │
-│               ▼                │
-│  ┌──────────────────────────┐  │
-│  │   Amplify Functions      │  │
-│  │  - getSubscriptionStatus │  │
-│  │  - createBillingPortal   │  │
-│  └──────────────────────────┘  │
+│ AWS Services │
+│ │
+│ ┌──────────────────────────┐ │
+│ │ AWS Cognito │ │
+│ │ (Authentication) │ │
+│ └──────────────────────────┘ │
+│ │ │
+│ ▼ │
+│ ┌──────────────────────────┐ │
+│ │ Amplify Functions │ │
+│ │ - getSubscriptionStatus │ │
+│ │ - createBillingPortal │ │
+│ │ - stripeWebhook (public)│ │
+│ └──────────────────────────┘ │
+│ │ │
+│ ▼ │
+│ ┌──────────────────────────┐ │
+│ │ DynamoDB │ │
+│ │ - UserStripeMapping │ │
+│ │ - SubscriptionCache │ │
+│ └──────────────────────────┘ │
 └──────────────┬─────────────────┘
-               │
-               ▼
-        ┌──────────────┐
-        │  Stripe API  │
-        │  (Test Mode) │
-        └──────────────┘
+│
+▼
+┌──────────────┐
+│ Stripe API │◄──── Webhooks
+│ (Test Mode) │
+└──────────────┘
 ```
 
 ## 🚦 Getting Started
@@ -172,7 +195,6 @@ subscription-status-viewer/
 
 ### Prerequisites
 
- 
 
 - Node.js 20+ and npm
 
@@ -219,7 +241,7 @@ subscription-status-viewer/
 VITE_STRIPE_PUBLISHABLE_KEY=your_publishable_key_here
 
 # Backend: Stripe Secret Key
-# SECURITY: This is ONLY used server-side, never exposed to frontend
+# SECURITY: This is ONLY used server-side, never exposed to the frontend
 # Get this from: https://dashboard.stripe.com/test/apikeys
 STRIPE_SECRET_KEY=your_secret_key_here
 
@@ -236,7 +258,7 @@ STRIPE_SECRET_KEY=your_secret_key_here
 # 2. Get the Cognito User ID from AWS Cognito Console or check CloudWatch logs
 #    - Go to: AWS Console > Cognito > User Pools > Users
 #    - The User ID is in the format: 12abc345-6789-0def-gh12-34567ijklm89
-# 3. Create a test customer in Stripe Dashboard
+# 3. Create a test customer in the Stripe Dashboard
 #    - Go to: https://dashboard.stripe.com/test/customers
 #    - Create a customer and get the Customer ID (format: cus_XXXXX)
 # 4. Convert Cognito User ID to environment variable format:
@@ -267,14 +289,25 @@ USER_STRIPE_CUSTOMER_DEFAULT=cus_DefaultTestCustomer
    npx ampx sandbox
 
    ```
-5. **Start development server**
+5. **Configure Stripe Webhook (after deployment)
+After deploying, you'll get a webhook URL from the Amplify outputs:
+* The webhook URL will be in the format:
+* https://xxxxx.lambda-url.us-east-1.on.aws/
+
+Configure this URL in your Stripe Dashboard:
+* Go to: https://dashboard.stripe.com/test/webhooks
+* Add an endpoint with the Lambda URL
+* Select events: customer.subscription.*, invoice.paid, invoice.payment_failed
+* Copy the webhook signing secret to your .env file
+
+6. **Start development server**
 
    ```bash
 
    npm run dev
 
    ```
-6. **Open browser**
+7. **Open browser**
 
    Navigate to `http://localhost:5173`
 ## 🔌 API Endpoints
@@ -285,15 +318,23 @@ Fetches the current subscription status for the authenticated user.
 **Response:**
 ```typescript
 {
-
   status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'none',
-
   planName?: string,
-
   renewalDate?: string,
-
-  renewalPeriod?: 'month' | 'year'
+  renewalPeriod?: 'month' | 'year',
+  cancelAtPeriodEnd?: boolean,
+  subscriptions?: Array<{
+    id: string,
+    status: string,
+    planName: string,
+    renewalDate: string,
+    renewalPeriod: string,
+    cancelAtPeriodEnd?: boolean,
+    cancelAt?: string
+  }>,
+  fromCache: boolean
 }
+
 
 ```
 ### POST Create Billing Portal
@@ -322,6 +363,17 @@ Creates a Stripe Billing Portal session for the user.
 }
 
 ```
+### POST Stripe Webhook (Public Endpoint)
+Receives webhook events from Stripe for real-time subscription updates.
+```
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+invoice.paid
+invoice.payment_failed
+Security: Validates Stripe signature using STRIPE_WEBHOOK_SECRET
+```
+
 ## 🔑 Key Design Decisions
 ### 1. Hardcoded Customer Mapping
 Currently uses environment variables to map Cognito user IDs to Stripe customer IDs:
