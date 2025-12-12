@@ -61,6 +61,10 @@ A full-stack web application for managing and viewing Stripe subscription status
 ### Users without a mapping strip customer
 ![Billing Portal](images/no_mapping_user.png)
 
+### webhook response to real-time change
+![Webhook](images/webhook_changed.png)
+
+
 ## 📁 Project Structure
 
 ```
@@ -395,12 +399,16 @@ Two separate Lambda functions for subscription operations:
 - **Separation of concerns**: Each function has a single responsibility
 
 - **Security**: Stripe secret keys remain server-side only
+- **stripe-webhook**: Handle real-time Stripe events (public endpoint)
 
 - **Scalability**: Independent scaling per function
 
-### 3. No Webhook Handlers
+### 3. Smart Caching Strategy
 
-Currently polling the Stripe API on demand rather than real-time webhooks.
+* Reduces Stripe API calls (rate limits & cost)
+* Improves response time for users
+* Automatically invalidated by webhooks
+* Falls back to Stripe API if cache is stale
 
 **Rationale**: Faster MVP development and simpler architecture.
 
@@ -415,6 +423,8 @@ Currently polling the Stripe API on demand rather than real-time webhooks.
 - ✅ **IAM Permissions**: Lambda functions restricted to authenticated Cognito users only
 - ✅ **HTTPS Enforced**: All communications encrypted in transit
 - ✅ **No Client Secrets**: Stripe secret keys never exposed to frontend
+- ✅ **Webhook Signature Verification: **: Ensures webhook events are from Stripe
+- ✅ **Public Webhook Endpoint: **: Uses signature validation instead of authentication
 
 ## 🧪 Development
 
