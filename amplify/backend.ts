@@ -52,6 +52,13 @@ backend.getSubscriptionStatus.resources.cfnResources.cfnFunction.addPropertyOver
   backend.data.resources.tables["SubscriptionCache"].tableName
 );
 
+backend.createBillingPortal.resources.cfnResources.cfnFunction.addPropertyOverride(
+  "Environment.Variables.USER_STRIPE_MAPPING_TABLE",
+  backend.data.resources.tables["UserStripeMapping"].tableName
+);
+
+backend.createBillingPortal.resources.lambda.addToRolePolicy(dynamoDbPolicy);
+
 // Lambda invoke permissions - using wildcard to avoid circular dependency
 backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
   new PolicyStatement({

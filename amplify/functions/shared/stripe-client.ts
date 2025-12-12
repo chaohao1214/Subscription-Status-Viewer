@@ -30,54 +30,62 @@ export const getStripeClient = (): Stripe => {
  */
 export const getCustomerId = async (userId: string): Promise<string> => {
   const tableName = process.env.USER_STRIPE_MAPPING_TABLE;
-
-  if (tableName) {
-    try {
-      const result = await dynamoClient.send(
-        new GetItemCommand({
-          TableName: tableName,
-          Key: {
-            userId: { S: userId },
-          },
-        })
-      );
-      if (result.Item?.stripeCustomerId?.S) {
-        console.log(
-          `Found DynamoDB mapping: ${userId} -> ${result.Item.stripeCustomerId.S}`
-        );
-        return result.Item.stripeCustomerId.S;
-      }
-    } catch (error) {
-      console.warn("DynamoDB lookup failed, falling back to env vars:", error);
-    }
+  if (!tableName) {
+    throw new Error(
+      "USER_STRIPE_MAPPING_TABLE environment variable is not set"
+    );
   }
+
+  try {
+    const result = await dynamoClient.send(
+      new GetItemCommand({
+        TableName: tableName,
+        Key: {
+          userId: { S: userId },
+        },
+      })
+    );
+
+    if (result.Item?.stripeCustomerId?.S) {
+      console.log(
+        `Found DynamoDB mapping: ${userId} -> ${result.Item.stripeCustomerId.S}`
+      );
+      return result.Item.stripeCustomerId.S;
+    }
+  } catch (error) {
+    console.error("DynamoDB lookup failed:", error);
+    throw new Error(`Failed to fetch customer mapping for user: ${userId}`);
+  }
+
+  // No mapping found
+  throw new Error(`No Stripe customer mapping found for user: ${userId}`);
 
   /**
    * since we use DynamoDB, we no longer need the code belows,
    *  because we complete Stretch Goal -Amplify Data model
    */
   // Fallback to environment variables
-  const sanitizedUserId = userId.replace(/-/g, "_").toUpperCase();
-  const userSpecificEnvVar = `USER_STRIPE_CUSTOMER_${sanitizedUserId}`;
+  // const sanitizedUserId = userId.replace(/-/g, "_").toUpperCase();
+  // const userSpecificEnvVar = `USER_STRIPE_CUSTOMER_${sanitizedUserId}`;
 
-  let customerId = process.env[userSpecificEnvVar];
+  // let customerId = process.env[userSpecificEnvVar];
 
-  if (customerId) {
-    console.log(`Found user-specific mapping: ${userId} -> ${customerId}`);
-    return customerId;
-  }
+  // if (customerId) {
+  //   console.log(`Found user-specific mapping: ${userId} -> ${customerId}`);
+  //   return customerId;
+  // }
 
-  // Fallback to default customer
-  customerId = process.env.USER_STRIPE_CUSTOMER_DEFAULT;
+  // // Fallback to default customer
+  // customerId = process.env.USER_STRIPE_CUSTOMER_DEFAULT;
 
-  if (customerId) {
-    console.log(`Using default customer mapping: ${userId} -> ${customerId}`);
-    return customerId;
-  }
+  // if (customerId) {
+  //   console.log(`Using default customer mapping: ${userId} -> ${customerId}`);
+  //   return customerId;
+  // }
 
-  // No mapping found - throw error
-  throw new Error(
-    `No Stripe customer mapping found for user: ${userId}. ` +
-      `Please set ${userSpecificEnvVar} or USER_STRIPE_CUSTOMER_DEFAULT environment variable.`
-  );
+  // // No mapping found - throw error
+  // throw new Error(
+  //   `No Stripe customer mapping found for user: ${userId}. ` +
+  //     `Please set ${userSpecificEnvVar} or USER_STRIPE_CUSTOMER_DEFAULT environment variable.`
+  // );
 };
