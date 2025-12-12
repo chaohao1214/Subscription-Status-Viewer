@@ -58,9 +58,6 @@ A full-stack web application for managing and viewing Stripe subscription status
 ### Stripe Billing Portal Integration
 ![Billing Portal](images/billingsPortal.png)
 
-### Users without a mapping strip customer
-![Billing Portal](images/no_mapping_user.png)
-
 ### webhook response to real-time change
 ![Webhook](images/webhook_changed.png)
 
@@ -191,6 +188,10 @@ subscription-status-viewer/
 │ Stripe API │◄──── Webhooks
 │ (Test Mode) │
 └──────────────┘
+
+│ │ DynamoDB │ │
+│ │ - UserStripeMapping │ │  ← Maps Cognito users to Stripe customers
+│ │ - SubscriptionCache │ │  ← Caches subscription data 
 ```
 
 ## 🚦 Getting Started
@@ -224,7 +225,6 @@ subscription-status-viewer/
 
    ```
 
- 
 
 2. **Install dependencies**
 
@@ -234,57 +234,15 @@ subscription-status-viewer/
 
    ```
 3. **Configure environment variables**
+   
    Create a `.env` file in the root directory:
 ```env
-# ============================================
-# STRIPE CONFIGURATION
-# ============================================
+   # Stripe Configuration
+   STRIPE_SECRET_KEY=sk_test_xxxxx
+   STRIPE_WEBHOOK_SECRET=whsec_xxxxx
 
-# Frontend: Stripe Publishable Key
-# Get this from: https://dashboard.stripe.com/test/apikeys
-VITE_STRIPE_PUBLISHABLE_KEY=your_publishable_key_here
-
-# Backend: Stripe Secret Key
-# SECURITY: This is ONLY used server-side, never exposed to the frontend
-# Get this from: https://dashboard.stripe.com/test/apikeys
-STRIPE_SECRET_KEY=your_secret_key_here
-
-# ============================================
-# USER-TO-CUSTOMER MAPPING
-# ============================================
-# This application uses environment variables to map Cognito User IDs
-# to Stripe Customer IDs (no database required for MVP).
-#
-# Format: USER_STRIPE_CUSTOMER_<COGNITO_USER_ID_IN_UPPERCASE_WITH_UNDERSCORES>
-#
-# How to set up:
-# 1. Create a test user in your application (sign up)
-# 2. Get the Cognito User ID from AWS Cognito Console or check CloudWatch logs
-#    - Go to: AWS Console > Cognito > User Pools > Users
-#    - The User ID is in the format: 12abc345-6789-0def-gh12-34567ijklm89
-# 3. Create a test customer in the Stripe Dashboard
-#    - Go to: https://dashboard.stripe.com/test/customers
-#    - Create a customer and get the Customer ID (format: cus_XXXXX)
-# 4. Convert Cognito User ID to environment variable format:
-#    - Replace all hyphens (-) with underscores (_)
-#    - Convert to UPPERCASE
-#    - Add USER_STRIPE_CUSTOMER_ prefix
-#
-# Example:
-# Cognito User ID: 12abc345-6789-0def-gh12-34567ijklm89
-# Stripe Customer ID: cus_AbCdEf123XyZ
-# Environment Variable: USER_STRIPE_CUSTOMER_12ABC345_6789_0DEF_GH12_34567IJKLM89
-
-# User 1 Example (replace with your actual values)
-USER_STRIPE_CUSTOMER_12ABC345_6789_0DEF_GH12_34567IJKLM89=cus_AbCdEf123XyZ
-
-# User 2 Example (add more users as needed)
-# USER_STRIPE_CUSTOMER_98ZYX765_4321_ABCD_EF01_234567UVWXYZ=cus_AnotherExample123
-
-# Default fallback customer (used when no specific user mapping exists)
-# IMPORTANT: Set this to a valid Stripe Customer ID
-# This customer will be used for any authenticated user without a specific mapping
-USER_STRIPE_CUSTOMER_DEFAULT=cus_DefaultTestCustomer
+   # Analytics (Optional)
+   VITE_AMPLITUDE_API_KEY=your_amplitude_key_here
 ```
 4. **Deploy Amplify backend**
 
@@ -303,6 +261,36 @@ Configure this URL in your Stripe Dashboard:
 * Add an endpoint with the Lambda URL
 * Select events: customer.subscription.*, invoice.paid, invoice.payment_failed
 * Copy the webhook signing secret to your .env file
+
+6. **Create User-to-Customer Mapping**
+
+   For testing, manually create a mapping between Cognito User ID and Stripe Customer ID:
+
+   a. Register a user in the application
+   
+   b. Get the Cognito User ID from the browser console:
+```JavaScript
+      localStorage.getItem('CognitoIdentityServiceProvider..LastAuthUser')
+```
+   
+   c. Create a test customer in the Stripe Dashboard
+   
+   d. Insert the mapping into DynamoDB:
+```bash
+      aws dynamodb put-item \
+        --table-name UserStripeMapping- \
+        --item '{
+          "userId": {"S": "your-cognito-user-id"},
+          "stripeCustomerId": {"S": "cus_xxxxx"},
+          "email": {"S": "user@example.com"},
+          "createdAt": {"S": "2024-12-12T00:00:00.000Z"},
+          "updatedAt": {"S": "2024-12-12T00:00:00.000Z"},
+          "__typename": {"S": "UserStripeMapping"}
+        }'
+```
+
+   **Note**: In production, this mapping should be created automatically via Cognito Post-Confirmation Trigger.
+```
 
 6. **Start development server**
 
@@ -379,31 +367,17 @@ Security: Validates Stripe signature using STRIPE_WEBHOOK_SECRET
 ```
 
 ## 🔑 Key Design Decisions
-### 1. Hardcoded Customer Mapping
-Currently uses environment variables to map Cognito user IDs to Stripe customer IDs:
-```typescript
 
-const CUSTOMER_MAP = {
-
-  "cognito-user-id": process.env.STRIPE_TEST_CUSTOMER_ID
-
-};
-
-```
-**Rationale**: Meets MVP requirements quickly without database overhead.
-**Future**: Migrate to DynamoDB for production scalability.
-### 2. Serverless Architecture
+### 1. Serverless Architecture
 
 Two separate Lambda functions for subscription operations:
 
 - **Separation of concerns**: Each function has a single responsibility
-
 - **Security**: Stripe secret keys remain server-side only
 - **stripe-webhook**: Handle real-time Stripe events (public endpoint)
-
 - **Scalability**: Independent scaling per function
 
-### 3. Smart Caching Strategy
+### 2. Smart Caching Strategy
 
 * Reduces Stripe API calls (rate limits & cost)
 * Improves response time for users
@@ -455,14 +429,10 @@ npx ampx sandbox delete  # Clean up sandbox
 npx ampx pipeline-deploy --branch main  # Deploy to production
 ```
 ## 🔮 Future Enhancements
-- [ ] **Real-time Updates**: Stripe webhook handlers for instant status changes
-- [ ] **Database Integration**: DynamoDB for user-customer mapping
-- [ ] **Billing History**: Table view of past invoices and payments
-- [ ] **Analytics**: Amplitude or similar for user behaviour tracking
-- [ ] **Testing**: Unit and integration tests with Vitest/Jest
-- [ ] **Multiple Plans**: Support for tiered subscription management
-- [ ] **Usage Metrics**: Track and display usage limits per plan
-- [ ] **Email Notifications**: Automated alerts for payment issues
+- [x] **Real-time Updates**: ✅ Implemented via Stripe webhooks
+- [x] **Database Integration**: ✅ DynamoDB for mapping and caching
+- [x] **Analytics**: ✅ Amplitude integration for tracking
+- [ ] **Automated User Onboarding**: Cognito Post-Confirmation Trigger for auto-creating Stripe customers
 ---
 ## 👤 Author
 **Chaohao Zhu**
