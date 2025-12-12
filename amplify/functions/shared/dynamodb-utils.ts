@@ -41,7 +41,7 @@ export async function getUserStripeMapping(
     const result = await client.send(
       new GetItemCommand({
         TableName: getUserStripeMappingTableName(),
-        Key: marshall({ id: userId }),
+        Key: marshall({ userId: userId }),
       })
     );
 
@@ -64,7 +64,6 @@ export async function saveUserStripeMapping(
       new PutItemCommand({
         TableName: getUserStripeMappingTableName(),
         Item: marshall({
-          id: mapping.userId,
           ...mapping,
           createdAt: mapping.createdAt || new Date().toISOString(),
         }),
@@ -112,7 +111,7 @@ export async function getSubscriptionCache(
     const result = await client.send(
       new GetItemCommand({
         TableName: tableName,
-        Key: marshall({ id: stripeCustomerId }),
+        Key: marshall({ stripeCustomerId: stripeCustomerId }),
       })
     );
 
@@ -156,7 +155,6 @@ export async function saveSubscriptionCache(
         TableName: getSubscriptionCacheTableName(),
         Item: marshall(
           {
-            id: cache.stripeCustomerId,
             stripeCustomerId: cache.stripeCustomerId,
             status: cache.status,
             planName: cache.planName,
