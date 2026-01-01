@@ -427,8 +427,8 @@ Two separate Lambda functions for subscription operations:
 - ✅ **IAM Permissions**: Lambda functions restricted to authenticated Cognito users only
 - ✅ **HTTPS Enforced**: All communications encrypted in transit
 - ✅ **No Client Secrets**: Stripe secret keys never exposed to frontend
-- ✅ **Webhook Signature Verification: **: Ensures webhook events are from Stripe
-- ✅ **Public Webhook Endpoint: **: Uses signature validation instead of authentication
+- ✅ **Webhook Signature**: Verification: **: Ensures webhook events are from Stripe
+- ✅ **Public Webhook Endpoint**: Uses signature validation instead of authentication
 - ✅ **Client-Side Cache Isolation**: React Query caches are scoped per user session
 
 
