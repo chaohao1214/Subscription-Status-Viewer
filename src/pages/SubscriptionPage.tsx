@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { type SubscriptionData } from "../types/subscription";
-import {
-  createBillingPortalSession,
-  getSubscriptionStatus,
-} from "../api/apiEndpoints";
+import { createBillingPortalSession } from "../api/apiEndpoints";
 import {
   CposButton,
   CposCard,
@@ -16,48 +12,33 @@ import {
 import { SubscriptionStatus } from "../components/views/SubscriptionStatus";
 import { useSignOut } from "../hooks/useSignOut";
 import * as amplitude from "@amplitude/unified";
+import { useSubscription } from "../hooks/useSubscription";
 /**
  * Subscription management page
  * Displays current subscription status and provides access to Stripe Billing Portal
  */
 const SubscriptionPage: React.FC = () => {
   const navigate = useNavigate();
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(
-    null
-  );
-  const [portalLoading, setPortalLoading] = useState(false);
   const { handleSignOut } = useSignOut();
+  const { data: subscription, isLoading, error, refetch } = useSubscription();
 
-  /**
-   * Fetch subscription data from backend
-   */
-
-  const fetchSubscription = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getSubscriptionStatus();
-      setSubscription(data);
-      amplitude.track("Subscription Data Fetched", {
-        status: data.status,
-        subscriptionCount: data.subscriptions?.length || 0,
-      });
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Failed to load subscription"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
   useEffect(() => {
     amplitude.track("Subscription Page Viewed");
-    fetchSubscription();
   }, []);
+  /**
+   * Fetch subscription data from backend with cache
+   */
+
+  useEffect(() => {
+    if (subscription) {
+      amplitude.track("Subscription Data Fetched", {
+        status: subscription.status,
+        subscriptionCount: subscription.subscriptions?.length || 0,
+      });
+    }
+  }, [subscription]);
 
   const handleManageBilling = async () => {
     amplitude.track("Manage Billing Clicked");
@@ -67,7 +48,7 @@ const SubscriptionPage: React.FC = () => {
       const { url } = await createBillingPortalSession(returnUrl);
       window.location.href = url;
     } catch (error) {
-      setError(
+      setPortalError(
         error instanceof Error ? error.message : "Failed to open billing portal"
       );
       setPortalLoading(false);
@@ -93,14 +74,27 @@ const SubscriptionPage: React.FC = () => {
         }
       />
       <CposCard>
-        {loading && <CposLoadingSpinner message="Loading subscription..." />}
+        {isLoading && <CposLoadingSpinner message="Loading subscription..." />}
         {error && (
-          <CposErrorMessage message={error} onRetry={fetchSubscription} />
+          <CposErrorMessage
+            message={
+              error instanceof Error
+                ? error.message
+                : "Failed to load subscription"
+            }
+            onRetry={() => refetch()}
+          />
         )}
-        {!loading && !error && subscription && (
+        {!isLoading && !error && subscription && (
           <>
             {" "}
             <SubscriptionStatus data={subscription} />
+            {portalError && (
+              <CposErrorMessage
+                message={portalError}
+                onRetry={handleManageBilling}
+              />
+            )}
             {subscription.status !== "none" && (
               <CposButton
                 variant="contained"
