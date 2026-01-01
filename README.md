@@ -11,7 +11,7 @@ A full-stack web application for managing and viewing Stripe subscription status
 
 - **Real-time Updates**: Stripe webhook integration for instant subscription status changes
 
-- **Smart Caching**: DynamoDB-backed caching with 5-minute TTL to reduce API calls
+- **Dual-Layer Caching**: React Query in-memory cache + DynamoDB backend cache for optimal performance
 
 - **Type-Safe**: Full TypeScript implementation across frontend and backend
 
@@ -29,7 +29,7 @@ A full-stack web application for managing and viewing Stripe subscription status
 - **React Query** - Data fetching and caching
 
 - **Vite** - Build tool and dev server
-
+- **React Query (TanStack Query)** - Client-side data fetching and caching
 ### Backend
 
 - **AWS Amplify Gen 2** - Backend infrastructure
@@ -102,7 +102,8 @@ subscription-status-viewer/
 │ ├── api/ # API client
 │ │ └── apiEndpoints.ts
 │ ├── hooks/ # Custom React hooks
-│ │ └── useSignOut.ts
+│ │ └── useSubscription.ts
+| | └── use.ts
 │ ├── config/ # Configuration
 │ │ └── amplify.ts
 │ ├── App.tsx # Root component
@@ -377,12 +378,41 @@ Two separate Lambda functions for subscription operations:
 - **stripe-webhook**: Handle real-time Stripe events (public endpoint)
 - **Scalability**: Independent scaling per function
 
-### 2. Smart Caching Strategy
+### 2. Dual-Layer Caching Strategy
 
-* Reduces Stripe API calls (rate limits & cost)
-* Improves response time for users
-* Automatically invalidated by webhooks
-* Falls back to Stripe API if cache is stale
+**Frontend Caching (React Query):**
+- In-memory cache for instant page loads
+- Configurable cache time and stale-while-revalidate
+- Automatic background refetching
+- Smart retry logic (1 retry on failure)
+- Disabled refetch on window focus for better UX
+- Optimistic updates for seamless user experience
+
+**Backend Caching (DynamoDB):**
+- Persistent cache with 5-minute TTL
+- Reduces Stripe API calls (rate limits & cost)
+- Automatically invalidated by webhooks
+- Falls back to Stripe API if cache is stale
+
+**Cache Tables:**
+- `SubscriptionCache`: Stores subscription status and details
+- `UserStripeMapping`: Maps Cognito users to Stripe customers
+
+**Flow:**
+1. User visits subscription page
+2. React Query checks in-memory cache (instant if available)
+3. If cache miss, fetches from Lambda
+4. Lambda checks DynamoDB cache (5-min TTL)
+5. If DynamoDB miss, fetches from Stripe API
+6. React Query stores results in memory for subsequent visits
+7. Webhooks update DynamoDB cache in real-time
+
+**Benefits:**
+- **Instant UI updates**: React Query serves cached data immediately
+- **Reduced latency**: Fewer network requests
+- **Cost optimization**: Minimizes Stripe API calls
+- **Better UX**: No loading spinners for cached data
+- **Resilience**: Automatic retries and error handling
 
 **Rationale**: Faster MVP development and simpler architecture.
 
@@ -399,6 +429,8 @@ Two separate Lambda functions for subscription operations:
 - ✅ **No Client Secrets**: Stripe secret keys never exposed to frontend
 - ✅ **Webhook Signature Verification: **: Ensures webhook events are from Stripe
 - ✅ **Public Webhook Endpoint: **: Uses signature validation instead of authentication
+- ✅ **Client-Side Cache Isolation**: React Query caches are scoped per user session
+
 
 ## 🧪 Development
 
