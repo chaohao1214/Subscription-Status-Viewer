@@ -26,8 +26,6 @@ A full-stack web application for managing and viewing Stripe subscription status
 
 - **React Router v7** - Client-side routing
 
-- **React Query** - Data fetching and caching
-
 - **Vite** - Build tool and dev server
 - **React Query (TanStack Query)** - Client-side data fetching and caching
 ### Backend
@@ -103,9 +101,10 @@ subscription-status-viewer/
 │ │ └── apiEndpoints.ts
 │ ├── hooks/ # Custom React hooks
 │ │ └── useSubscription.ts
-| | └── use.ts
+| | └── useSignOut.ts
 │ ├── config/ # Configuration
-│ │ └── amplify.ts
+│ │ └── amplify.ts      # AWS Amplify config
+| | └── amplitude.ts    # Analytics initializatio
 │ ├── App.tsx # Root component
 │ ├── main.tsx # Entry point
 │ └── theme.ts # MUI theme configuration
@@ -120,6 +119,9 @@ subscription-status-viewer/
 │ │ │ ├── handler.ts # Fetch subscription (with cache check)
 │ │ │ ├── resource.ts
 │ │ │ └── package.json
+│ │ ├── cognito-post-confirmation/
+│ │ │ ├── handler.ts          # Auto-create Stripe customer on signup
+│ │ │ └── resource.ts         # Cognito trigger configuration
 │ │ ├── create-billing-portal/
 │ │ │ ├── handler.ts # Generate Stripe portal URL
 │ │ │ ├── resource.ts # Lambda configuration
@@ -163,9 +165,9 @@ subscription-status-viewer/
 ┌────────────────────────────────┐
 │ AWS Services │
 │ │
-│ ┌──────────────────────────┐ │
-│ │ AWS Cognito │ │
-│ │ (Authentication) │ │
+│ │ │ AWS Cognito │ │
+│ │ │ (Authentication) │ │
+│ │ │ + Post-Confirmation │ │  ← Auto-creates Stripe customer
 │ └──────────────────────────┘ │
 │ │ │
 │ ▼ │
@@ -263,36 +265,6 @@ Configure this URL in your Stripe Dashboard:
 * Select events: customer.subscription.*, invoice.paid, invoice.payment_failed
 * Copy the webhook signing secret to your .env file
 
-6. **Create User-to-Customer Mapping**
-
-   For testing, manually create a mapping between Cognito User ID and Stripe Customer ID:
-
-   a. Register a user in the application
-   
-   b. Get the Cognito User ID from the browser console:
-```JavaScript
-      localStorage.getItem('CognitoIdentityServiceProvider..LastAuthUser')
-```
-   
-   c. Create a test customer in the Stripe Dashboard
-   
-   d. Insert the mapping into DynamoDB:
-```bash
-      aws dynamodb put-item \
-        --table-name UserStripeMapping- \
-        --item '{
-          "userId": {"S": "your-cognito-user-id"},
-          "stripeCustomerId": {"S": "cus_xxxxx"},
-          "email": {"S": "user@example.com"},
-          "createdAt": {"S": "2024-12-12T00:00:00.000Z"},
-          "updatedAt": {"S": "2024-12-12T00:00:00.000Z"},
-          "__typename": {"S": "UserStripeMapping"}
-        }'
-```
-
-   **Note**: In production, this mapping should be created automatically via Cognito Post-Confirmation Trigger.
-```
-
 6. **Start development server**
 
    ```bash
@@ -371,12 +343,13 @@ Security: Validates Stripe signature using STRIPE_WEBHOOK_SECRET
 
 ### 1. Serverless Architecture
 
-Two separate Lambda functions for subscription operations:
+Four separate Lambda functions for different responsibilities:
 
-- **Separation of concerns**: Each function has a single responsibility
-- **Security**: Stripe secret keys remain server-side only
+- **get-subscription-status**: Fetch subscription data with caching
+- **create-billing-portal**: Generate Stripe portal sessions
 - **stripe-webhook**: Handle real-time Stripe events (public endpoint)
-- **Scalability**: Independent scaling per function
+- **cognito-post-confirmation**: Auto-create Stripe customers on user signup
+
 
 ### 2. Dual-Layer Caching Strategy
 
@@ -398,25 +371,45 @@ Two separate Lambda functions for subscription operations:
 - `SubscriptionCache`: Stores subscription status and details
 - `UserStripeMapping`: Maps Cognito users to Stripe customers
 
+### 3. Automated User Onboarding
+
+**Cognito Post-Confirmation Trigger:**
+- Automatically triggered when a new user signs up
+- Creates a Stripe customer with the user's email
+- Saves userId → stripeCustomerId mapping in DynamoDB
+- Zero manual configuration required
+
 **Flow:**
-1. User visits subscription page
-2. React Query checks in-memory cache (instant if available)
-3. If cache miss, fetches from Lambda
-4. Lambda checks DynamoDB cache (5-min TTL)
-5. If DynamoDB miss, fetches from Stripe API
-6. React Query stores results in memory for subsequent visits
-7. Webhooks update DynamoDB cache in real-time
+1. User completes signup in the app
+2. Cognito triggers post-confirmation Lambda
+3. Lambda creates a Stripe customer via API
+4. Lambda saves mapping to the UserStripeMapping table
+5. The user can immediately view subscription status
 
 **Benefits:**
-- **Instant UI updates**: React Query serves cached data immediately
-- **Reduced latency**: Fewer network requests
-- **Cost optimization**: Minimizes Stripe API calls
-- **Better UX**: No loading spinners for cached data
-- **Resilience**: Automatic retries and error handling
+- **Seamless Onboarding**: No manual setup for new users
+- **Data Consistency**: Single source of truth in DynamoDB
+- **Scalability**: Handles unlimited users automatically
+- **Error Handling**: Robust logging for troubleshooting
 
-**Rationale**: Faster MVP development and simpler architecture.
+### 4. User Analytics with Amplitude
 
-**Future**: Add webhook handlers for real-time subscription updates.
+**Event Tracking:**
+- Page views (Login, Dashboard, Subscription)
+- User actions (Manage Billing clicked)
+- Subscription data fetched events
+- Custom properties for deeper insights
+
+**Implementation:**
+- Initialized on app startup
+- Tracks key user interactions
+- Optional: Gracefully disabled if API key not configured
+
+**Benefits:**
+- **Product Insights**: Understand user behavior patterns
+- **Feature Usage**: Track which features are most used
+- **Conversion Funnel**: Monitor user journey from login to billing
+
 
 ## 🔒 Security
 - ✅ **Protected Routes**: ProtectedRoute component prevents unauthorized access to dashboard and subscription pages
@@ -464,7 +457,7 @@ npx ampx pipeline-deploy --branch main  # Deploy to production
 - [x] **Real-time Updates**: ✅ Implemented via Stripe webhooks
 - [x] **Database Integration**: ✅ DynamoDB for mapping and caching
 - [x] **Analytics**: ✅ Amplitude integration for tracking
-- [ ] **Automated User Onboarding**: Cognito Post-Confirmation Trigger for auto-creating Stripe customers
+- [x] **Automated User Onboarding**:✅ Cognito Post-Confirmation Trigger for auto-creating Stripe customers
 ---
 ## 👤 Author
 **Chaohao Zhu**
