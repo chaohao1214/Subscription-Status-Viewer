@@ -63,6 +63,11 @@ async function invokeLambda<T>(
     })
   );
 
+  if (response.FunctionError) {
+    console.error("Lambda function error:", response.FunctionError);
+    throw new Error("Service temporarily unavailable");
+  }
+
   const result = JSON.parse(new TextDecoder().decode(response.Payload));
 
   if (result.statusCode !== 200) {
