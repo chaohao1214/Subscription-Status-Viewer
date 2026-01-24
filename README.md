@@ -422,7 +422,10 @@ Four separate Lambda functions for different responsibilities:
 - ✅ **No Client Secrets**: Stripe secret keys never exposed to frontend
 - ✅ **Webhook Signature**: Verification: **: Ensures webhook events are from Stripe
 - ✅ **Public Webhook Endpoint**: Uses signature validation instead of authentication
-- ✅ **Client-Side Cache Isolation**: React Query caches are scoped per user session
+- ✅ **Client-Side Cache Isolation**: React Query caches scoped per user with automatic cleanup on logout
+- ✅ **User-Scoped Cache Keys**: Query keys include userId to prevent cross-user data leaks
+- ✅ **Per-Customer Backend Cache**: DynamoDB cache partitioned by stripeCustomerId
+- ✅ **Automatic Cache Cleanup**: All cached data is cleared on sign-out to prevent data persistence
 
 
 ## 🧪 Development
