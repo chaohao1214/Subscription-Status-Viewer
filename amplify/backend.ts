@@ -31,14 +31,23 @@ function configureDynamoDbAccess() {
   const region = process.env.AWS_REGION || "us-east-1";
   const accountId = process.env.AWS_ACCOUNT_ID || "*";
 
-  // For Cognito trigger: use table name pattern to avoid circular dependency
+  // Policy 1: PutItem with restricted resource
   backend.cognitoPostConfirmation.resources.lambda.addToRolePolicy(
     new PolicyStatement({
-      actions: ["dynamodb:PutItem", "dynamodb:ListTables"],
-      resources: ["*"], // Wildcard to avoid circular dependency
+      actions: ["dynamodb:PutItem"],
+      resources: [
+        `arn:aws:dynamodb:${region}:${accountId}:table/UserStripeMapping-*`,
+      ],
     })
   );
 
+  // Policy 2: ListTables (AWS requires "*" for this action)
+  backend.cognitoPostConfirmation.resources.lambda.addToRolePolicy(
+    new PolicyStatement({
+      actions: ["dynamodb:ListTables"],
+      resources: ["*"],
+    })
+  );
   // For other functions: direct table reference (no circular dependency)
   const dynamoDbPolicy = new PolicyStatement({
     actions: [
@@ -92,6 +101,18 @@ function configureEnvironmentVariables() {
     subscriptionCacheTableName
   );
 
+  addEnvVar(
+    backend.stripeWebhook,
+    "STRIPE_SECRET_KEY",
+    process.env.STRIPE_SECRET_KEY
+  );
+
+  addEnvVar(
+    backend.stripeWebhook,
+    "STRIPE_WEBHOOK_SECRET",
+    process.env.STRIPE_WEBHOOK_SECRET
+  );
+
   // Get Subscription Status
   addEnvVar(
     backend.getSubscriptionStatus,
@@ -130,10 +151,16 @@ function addEnvVar(
  * Configure Lambda invoke permissions for authenticated users
  */
 function configureLambdaInvokePermissions() {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const accountId = process.env.AWS_ACCOUNT_ID || "*";
   backend.auth.resources.authenticatedUserIamRole.addToPrincipalPolicy(
     new PolicyStatement({
       actions: ["lambda:InvokeFunction"],
-      resources: ["*"], // Wildcard to avoid circular dependency
+      resources: [
+        `arn:aws:lambda:${region}:${accountId}:function:*subscriptionstatus*`,
+        // Pattern matches: createBillingPortal Lambda
+        `arn:aws:lambda:${region}:${accountId}:function:*billingportal*`,
+      ],
     })
   );
 }
