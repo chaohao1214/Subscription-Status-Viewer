@@ -97,7 +97,7 @@ export interface SubscriptionCache {
   currentPeriodEnd?: string;
   cancelAtPeriodEnd?: boolean;
   subscriptions?: SubscriptionItem[];
-  updatedAt: string;
+  updatedAt?: string;
   lastSyncedFromStripe?: string;
 }
 
