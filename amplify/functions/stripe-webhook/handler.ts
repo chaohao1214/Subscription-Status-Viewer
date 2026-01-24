@@ -7,6 +7,7 @@ import {
 } from "../shared/response-utils";
 import type Stripe from "stripe";
 import { fetchAndCacheSubscriptions } from "../shared/subscription-utils";
+import { validateWebhookSecret } from "../shared/utils";
 
 /**
  * Stripe Webhook Handler
@@ -30,15 +31,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // Get webhook secret from environment
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    if (!webhookSecret || webhookSecret === "whsec_placeholder") {
-      console.warn(
-        "Using placeholder webhook secret - signature verification skipped"
-      );
-      const body = JSON.parse(event.body || "{}");
-      console.log("Event type:", body.type);
-      return successResponse({ received: true, verified: false });
-    }
+    const webhookSecret = validateWebhookSecret(
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
 
     // Verify webhook signature (ensures request is from Stripe)
     let stripeEvent: Stripe.Event;
