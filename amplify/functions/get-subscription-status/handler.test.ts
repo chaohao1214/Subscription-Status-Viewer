@@ -1,28 +1,31 @@
-import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import type { APIGatewayProxyResult } from "aws-lambda";
-import { mockClient } from "aws-sdk-client-mock";
+import { handler } from "./handler";
 import * as authUtils from "../shared/auth-utils";
 import * as stripeClient from "../shared/stripe-client";
-import * as dynamodbUtils from "../shared/dynamodb-utils";
-import { Authorization } from "aws-cdk-lib/aws-events";
-import { handler } from "./handler";
-// @ts-ignore
-const ddbMock = mockClient(DynamoDBDocumentClient);
+
+jest.mock("../shared/dynamodb-utils", () => ({
+  getSubscriptionCache: jest.fn(),
+  isCacheFresh: jest.fn(),
+}));
+
+jest.mock("../shared/subscription-utils", () => ({
+  fetchAndCacheSubscriptions: jest.fn(),
+}));
 
 jest.mock("../shared/auth-utils");
 jest.mock("../shared/stripe-client");
 
-describe("get-subscription Lambda", () => {
-  //reset each test
+import { getSubscriptionCache, isCacheFresh } from "../shared/dynamodb-utils";
+import { fetchAndCacheSubscriptions } from "../shared/subscription-utils";
+
+describe("get-subscription Lambda handler", () => {
   beforeEach(() => {
-    ddbMock.reset();
     jest.clearAllMocks();
   });
 
   test("returns cached subscription when cache is fresh", async () => {
     (authUtils.validateAuthentication as jest.Mock).mockReturnValue("user-123");
-
-    (stripeClient.getCustomerId as jest.Mock).mockReturnValue("cus_test123");
+    (stripeClient.getCustomerId as jest.Mock).mockResolvedValue("cus_test123");
     (stripeClient.getStripeClient as jest.Mock).mockReturnValue({});
 
     const mockCacheData = {
@@ -32,16 +35,14 @@ describe("get-subscription Lambda", () => {
       currentPeriodEnd: "1735689600",
       cancelAtPeriodEnd: false,
       subscriptions: [],
-      ttl: Math.floor(Date.now() / 1000) + 3600,
+      updatedAt: new Date().toISOString(),
     };
 
-    jest
-      .spyOn(dynamodbUtils, "getSubscriptionCache")
-      .mockResolvedValue(mockCacheData);
-    jest.spyOn(dynamodbUtils, "isCacheFresh").mockReturnValue(true);
+    (getSubscriptionCache as jest.Mock).mockResolvedValue(mockCacheData);
+    (isCacheFresh as jest.Mock).mockReturnValue(true);
 
     const event = {
-      header: { Authorization: "Bearer valid-token" },
+      headers: { Authorization: "Bearer valid-token" },
     } as any;
 
     const result = (await handler(
@@ -58,30 +59,21 @@ describe("get-subscription Lambda", () => {
   });
 
   test("fetches from Stripe when cache is stale", async () => {
-    // Mock authentication
     (authUtils.validateAuthentication as jest.Mock).mockReturnValue("user-123");
-
-    // Mock Stripe customer ID
     (stripeClient.getCustomerId as jest.Mock).mockResolvedValue("cus_test123");
     (stripeClient.getStripeClient as jest.Mock).mockReturnValue({});
 
-    // Mock stale cache
-    jest.spyOn(dynamodbUtils, "getSubscriptionCache").mockResolvedValue(null);
-    jest.spyOn(dynamodbUtils, "isCacheFresh").mockReturnValue(false);
+    (getSubscriptionCache as jest.Mock).mockResolvedValue(null);
+    (isCacheFresh as jest.Mock).mockReturnValue(false);
 
-    // Mock fetchAndCacheSubscriptions (need to mock this module too)
-    const subscriptionUtils = require("../shared/subscription-utils");
-    jest
-      .spyOn(subscriptionUtils, "fetchAndCacheSubscriptions")
-      .mockResolvedValue({
-        status: "active",
-        planName: "Enterprise Plan",
-        currentPeriodEnd: 1735689600,
-        cancelAtPeriodEnd: false,
-        subscriptions: [],
-      });
+    (fetchAndCacheSubscriptions as jest.Mock).mockResolvedValue({
+      status: "active",
+      planName: "Enterprise Plan",
+      currentPeriodEnd: "1735689600",
+      cancelAtPeriodEnd: false,
+      subscriptions: [],
+    });
 
-    // Execute handler
     const event = {
       headers: { Authorization: "Bearer valid-token" },
     } as any;
@@ -92,7 +84,6 @@ describe("get-subscription Lambda", () => {
       {} as any
     )) as APIGatewayProxyResult;
 
-    // Verify response
     expect(result.statusCode).toBe(200);
     const body = JSON.parse(result.body);
     expect(body.status).toBe("active");
@@ -100,7 +91,6 @@ describe("get-subscription Lambda", () => {
   });
 
   test("returns 401 when user is not authenticated", async () => {
-    // Mock authentication failure
     (authUtils.validateAuthentication as jest.Mock).mockImplementation(() => {
       throw new Error("User not authenticated");
     });

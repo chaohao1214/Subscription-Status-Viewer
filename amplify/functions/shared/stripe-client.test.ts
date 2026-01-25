@@ -1,14 +1,40 @@
-import { mockClient } from "aws-sdk-client-mock";
-import "aws-sdk-client-mock-jest";
 import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import { getStripeClient, getCustomerId } from "./stripe-client";
 
-// @ts-ignore
-const dynamoMock = mockClient(DynamoDBClient);
+jest.mock("stripe", () => {
+  const mockStripe = jest.fn().mockImplementation(() => ({
+    customers: {},
+    subscriptions: {},
+  }));
+
+  // default export
+  return {
+    __esModule: true,
+    default: mockStripe,
+  };
+});
+
+// Mock AWS SDK
+jest.mock("@aws-sdk/client-dynamodb", () => {
+  const mockSend = jest.fn();
+  return {
+    DynamoDBClient: jest.fn(() => ({
+      send: mockSend,
+    })),
+    GetItemCommand: jest.fn((params) => params),
+    __mockSend: mockSend,
+  };
+});
 
 describe("stripe-client", () => {
+  let mockSend: jest.Mock;
+
   beforeEach(() => {
-    dynamoMock.reset();
+    jest.clearAllMocks();
+
+    const aws = require("@aws-sdk/client-dynamodb");
+    mockSend = aws.__mockSend;
+
     process.env.STRIPE_SECRET_KEY = "sk_test_mock_key";
     process.env.USER_STRIPE_MAPPING_TABLE = "test-mapping-table";
   });
@@ -33,9 +59,7 @@ describe("stripe-client", () => {
 
   describe("getCustomerId", () => {
     test("returns customerId from DynamoDB mapping", async () => {
-      // @ts-ignore
-      dynamoMock.on(GetItemCommand).resolves({
-        // @ts-ignore
+      mockSend.mockResolvedValue({
         Item: {
           userId: { S: "user-123" },
           stripeCustomerId: { S: "cus_test123" },
@@ -43,7 +67,14 @@ describe("stripe-client", () => {
       });
 
       const customerId = await getCustomerId("user-123");
+
       expect(customerId).toBe("cus_test123");
+      expect(mockSend).toHaveBeenCalledWith(
+        expect.objectContaining({
+          TableName: "test-mapping-table",
+          Key: { userId: { S: "user-123" } },
+        })
+      );
     });
 
     test("throws error when USER_STRIPE_MAPPING_TABLE is not set", async () => {
@@ -55,8 +86,9 @@ describe("stripe-client", () => {
     });
 
     test("throws error when no mapping found in DynamoDB", async () => {
-      // @ts-ignore
-      dynamoMock.on(GetItemCommand).resolves({});
+      mockSend.mockResolvedValue({
+        Item: undefined,
+      });
 
       await expect(getCustomerId("user-456")).rejects.toThrow(
         "No Stripe customer mapping found for user: user-456"
@@ -64,8 +96,7 @@ describe("stripe-client", () => {
     });
 
     test("throws error when DynamoDB query fails", async () => {
-      // @ts-ignore
-      dynamoMock.on(GetItemCommand).rejects(new Error("DynamoDB error"));
+      mockSend.mockRejectedValue(new Error("DynamoDB error"));
 
       await expect(getCustomerId("user-789")).rejects.toThrow(
         "Failed to fetch customer mapping for user: user-789"
