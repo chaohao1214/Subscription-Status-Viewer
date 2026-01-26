@@ -203,6 +203,10 @@ function addOutputs(stripeWebhookUrl: string) {
           backend.createBillingPortal.resources.lambda.functionArn,
         stripeWebhook: backend.stripeWebhook.resources.lambda.functionArn,
         stripeWebhookUrl: stripeWebhookUrl,
+        getSubscriptionPlans:
+          backend.getSubscriptionPlans.resources.lambda.functionArn,
+        createCheckoutSession:
+          backend.createCheckoutSession.resources.lambda.functionArn,
       },
     },
   });
