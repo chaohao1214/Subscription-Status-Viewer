@@ -6,7 +6,9 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const SubscriptionPage = lazy(() => import("./pages/SubscriptionPage"));
-
+const SubscriptionPlansPage = lazy(
+  () => import("./pages/SubscriptionPlansPage")
+);
 function App() {
   return (
     <BrowserRouter>
@@ -26,6 +28,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <SubscriptionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/plans"
+            element={
+              <ProtectedRoute>
+                <SubscriptionPlansPage />
               </ProtectedRoute>
             }
           />

@@ -12,3 +12,17 @@ export const formatDate = (dateString?: string) => {
     day: "numeric",
   });
 };
+
+/**
+ * Format price in cents to currency string
+ * @param amount - Price in cents
+ * @param currency - Currency code (e.g., 'cad', 'usd')
+ * @returns Formatted price string (e.g., '$29.00')
+ */
+
+export function formatPrice(amount: number, currency: string): string {
+  return new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amount / 100);
+}

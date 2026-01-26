@@ -5,6 +5,7 @@ import {
   CposCard,
   CposContainer,
   CposPageHeader,
+  CposStack,
 } from "../components/ui";
 import { Typography } from "@mui/material";
 import { useSignOut } from "../hooks/useSignOut";
@@ -31,13 +32,22 @@ const DashboardPage: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Manage your subscription and billing information.
         </Typography>
-        <CposButton
-          variant="contained"
-          onClick={() => navigate("/subscription")}
-          fullWidth
-        >
-          View Subscription
-        </CposButton>
+        <CposStack spacing={2}>
+          <CposButton
+            variant="contained"
+            onClick={() => navigate("/subscription")}
+            fullWidth
+          >
+            View Subscription
+          </CposButton>
+          <CposButton
+            variant="outlined"
+            onClick={() => navigate("/plans")}
+            fullWidth
+          >
+            View Plans
+          </CposButton>
+        </CposStack>
       </CposCard>
     </CposContainer>
   );
