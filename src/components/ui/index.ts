@@ -9,3 +9,4 @@ export { CposText } from "./CposText";
 export { CposDivider } from "./CposDivider";
 export { CposBadge } from "./CposBadge";
 export { CposStack } from "./CposStack";
+export { CposGrid } from "./CposGrid";
