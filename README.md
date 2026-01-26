@@ -59,6 +59,11 @@ A full-stack web application for managing and viewing Stripe subscription status
 ### webhook response to real-time change
 ![Webhook](images/webhook_changed.png)
 
+### Subscription Plans
+![Plans Page](images/view_plan.png)
+
+### Stripe Checkout Portal
+![Checkout Portal](images/checkout_url.png)
 
 ## 📁 Project Structure
 
