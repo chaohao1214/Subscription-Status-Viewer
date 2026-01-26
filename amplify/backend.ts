@@ -6,6 +6,7 @@ import { createBillingPortal } from "./functions/create-billing-portal/resource"
 import { stripeWebhook } from "./functions/stripe-webhook/resource";
 import { cognitoPostConfirmation } from "./functions/cognito-post-confirmation/resource";
 import { getSubscriptionPlans } from "./functions/get-subscription-plans/resource";
+import { createCheckoutSession } from "./functions/create-checkout-session/resource";
 import { PolicyStatement, AnyPrincipal } from "aws-cdk-lib/aws-iam";
 import { FunctionUrlAuthType } from "aws-cdk-lib/aws-lambda";
 
@@ -20,6 +21,7 @@ const backend = defineBackend({
   createBillingPortal,
   stripeWebhook,
   getSubscriptionPlans,
+  createCheckoutSession,
 });
 
 // ============================================
@@ -163,6 +165,7 @@ function configureLambdaInvokePermissions() {
         // Pattern matches: createBillingPortal Lambda
         `arn:aws:lambda:${region}:${accountId}:function:*billingportal*`,
         `arn:aws:lambda:${region}:${accountId}:function:*subscriptionplans*`,
+        `arn:aws:lambda:${region}:${accountId}:function:*checkoutsession*`,
       ],
     })
   );
