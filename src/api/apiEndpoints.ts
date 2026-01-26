@@ -2,7 +2,9 @@ import { fetchAuthSession } from "aws-amplify/auth";
 import { Lambda, InvokeCommand } from "@aws-sdk/client-lambda";
 import type {
   BillingPortalResponse,
+  CheckoutSessionResponse,
   SubscriptionData,
+  SubscriptionPlansResponse,
 } from "../types/subscription";
 import outputs from "../../amplify_outputs.json";
 
@@ -18,6 +20,8 @@ if (!lambdaFunctions) {
 const LAMBDA_ENDPOINTS = {
   getSubscription: lambdaFunctions.getSubscriptionStatus,
   createBillingPortal: lambdaFunctions.createBillingPortal,
+  getSubscriptionPlans: lambdaFunctions.getSubscriptionPlans,
+  createCheckoutSession: lambdaFunctions.createCheckoutSession,
 } as const;
 
 /**
@@ -114,6 +118,39 @@ export async function createBillingPortalSession(
       httpMethod: "POST",
       path: "/billing-portal",
       body: JSON.stringify({ returnUrl }),
+    }
+  );
+}
+
+/**
+ * Fetch available subscription plans from Stripe
+ * @returns Array of Stripe products with pricing information
+ */
+
+export async function getSubscriptionPlans(): Promise<SubscriptionPlansResponse> {
+  return invokeLambda<SubscriptionPlansResponse>(
+    LAMBDA_ENDPOINTS.getSubscriptionPlans
+  );
+}
+
+/**
+ * Create a Stripe Checkout session for subscription purchase
+ * @param priceId - Stripe price ID to subscribe to
+ * @param successUrl - URL to redirect after successful payment
+ * @param cancelUrl - URL to redirect if user cancels
+ * @returns Checkout session ID and URL
+ */
+
+export async function createCheckoutSession(
+  priceId: string,
+  successUrl: string,
+  cancelUrl: string
+): Promise<CheckoutSessionResponse> {
+  return invokeLambda<CheckoutSessionResponse>(
+    LAMBDA_ENDPOINTS.createCheckoutSession,
+    {
+      httpMethod: "POST",
+      body: JSON.stringify({ priceId, successUrl, cancelUrl }),
     }
   );
 }
